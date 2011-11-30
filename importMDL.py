@@ -6,7 +6,7 @@ from statemachine import StateMachine, BaseHandler
 
 infile = None
 globalkeys = ['Version', 'Geoset']
-geosetkeys = ['Vertices', 'Normals', 'TVertices']
+geosetkeys = ['Vertices', 'Normals', 'TVertices', 'Faces']
 geosets = []
 
 class SEARCH(BaseHandler):
@@ -18,6 +18,8 @@ class SEARCH(BaseHandler):
 			if current == '' :
 				newState = 'EOF'
 				break
+			elif current.strip().startswith('//'):
+				continue
 			elif current.strip().split()[0] in globalkeys:
 				newState = current.strip().split()[0].upper()
 				break
@@ -84,6 +86,20 @@ class TVERTICES(BaseHandler):
 			geosets[cargo['geoindex']].tvertices.append(li)
 		return ['GEOSET', cargo]
 
+class FACES(BaseHandler):
+	def run(self, cargo):
+		cargo = BaseHandler.run(self, cargo)[1]
+		grps, cnt = [int(n) for n in cargo['last'].strip().split()[1:3]]
+		li = []
+		while len(li) < cnt:
+			cargo['last'] = current = infile.readline()
+			if current.strip().startswith('Triangles'):
+				for i in range(grps):
+					li += [int(n) for n in infile.readline().strip().strip('{},;').split(', ')]
+		for i in range(cnt//3):
+			geosets[cargo['geoindex']].faces.append([li[3*i], li[3*i+1], li[3*i+2]])
+		return ['GEOSET', cargo]
+
 def run():
 	global infile
 	print('Please input the path to the file')
@@ -96,6 +112,7 @@ def run():
 	m.add('VERTICES', VERTICES)
 	m.add('NORMALS', NORMALS)
 	m.add('TVERTICES', TVERTICES)
+	m.add('FACES', FACES)
 	m.add('EOF', None, endState=True)
 	m.run()
 	for geoset in geosets:
