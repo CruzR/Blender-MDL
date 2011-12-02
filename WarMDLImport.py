@@ -1,8 +1,77 @@
-#!/usr/bin/python3
-
+import bpy
+import string
 import io
-from mdl import Geoset
-from statemachine import StateMachine, BaseHandler
+
+from bpy_extras.io_utils import ImportHelper
+from bpy.props import StringProperty
+
+# TODO: Add addon description
+# TODO: Add more comments
+
+# This is our abstract state machine
+class StateMachine:
+
+# @param handlers: Dictionary containing name => function pairs
+# @param startState: The first state to call when starting
+# @param endStates: State machine will end execution on these
+	def __init__(self, handlers={}, startState=None, endStates=[]):
+		self.handlers = handlers
+		self.startState = startState
+		self.endStates = endStates
+
+# @param name: The name of the state to add
+# @param handler: A function to handle the state
+# @param endState: Bool whether this should be added to endStates
+# @param startState: Bool whether this should be set as startState
+	def add(self, name, handler, endState=False, startState=False):
+		name = name.upper()
+		if handler:
+			self.handlers[name] = handler()
+		if endState:
+			self.endStates.append(name)
+			print(self.endStates)
+		if startState:
+			self.startState = name
+
+# @param name: Name of the state which shall be set as startState
+	def set_start(self, name):
+		name = name.upper()
+		if name in self.handlers:
+			self.startState = name
+
+# @param cargo: Some kind of information to carry through the states
+	def run(self, cargo={}):
+		try:
+			handler = self.handlers[self.startState]
+		except:
+			raise Exception("InitError: Set startState before calling StateMachine.run()")
+		if not self.endStates:
+			raise Exception("InitError: There must be at least one endstate")
+		
+		while True:
+			newState, cargo = handler.run(cargo)
+			if newState.upper() in self.endStates:
+				break
+			else:
+				handler = self.handlers[newState.upper()]
+
+# All Handlers should be derived from BaseHandler.
+# They all have to override the .run() function
+# They should always call newState, cargo = BaseHandler.run(cargo)
+# before doing anything else.
+class BaseHandler:
+	def run(self, cargo):
+		cargo['prev_handler'] = self.__class__.__name__
+		#print("Prev: {}".format(cargo['prev_handler']))
+		return ['SEARCH', cargo]
+
+class Geoset:
+	def __init__(self, vertices=[], normals=[], tvertices=[], faces=[]):
+		self.vertices = vertices
+		self.normals = normals
+		self.tvertices = tvertices
+		self.faces = faces
+
 
 infile = None
 globalkeys = ['Version', 'Geoset']
@@ -100,10 +169,9 @@ class FACES(BaseHandler):
 			geosets[cargo['geoindex']].faces.append([li[3*i], li[3*i+1], li[3*i+2]])
 		return ['GEOSET', cargo]
 
-def run():
+def run(filepath):
 	global infile
-	print('Please input the path to the file')
-	filepath = input('--> ')
+	print("Opening {}...".format(filepath))
 	infile = open(filepath, 'r')
 	m = StateMachine()
 	m.add('SEARCH', SEARCH, startState=True)
@@ -115,7 +183,48 @@ def run():
 	m.add('FACES', FACES)
 	m.add('EOF', None, endState=True)
 	m.run()
+	
+	# TODO: Actually use the gathered data
 	for geoset in geosets:
 		print('Vertices: {}'.format(geoset.vertices))
 		print('Normals: {}'.format(geoset.normals))
 		print('TVertices: {}'.format(geoset.tvertices))
+	
+	return {'FINISHED'}
+
+class ImportWarMDL(bpy.types.Operator, ImportHelper):
+	'''Bla bla bla!'''
+	bl_idname = "import_mesh.warmdl"
+	bl_label = "Import WarCraft MDL"
+	
+	filename_ext = ".mdl"
+	
+	filter_glob = StringProperty(
+			default="*.mdl",
+			options={'HIDDEN'}
+			)
+	
+	@classmethod
+	def poll(cls, context):
+		return context.active_object is not None
+	
+	def execute(self, context):
+		return run(self.filepath)
+
+def menu_func_export(self, context):
+	self.layout.operator(ImportWarMDL.bl_idname, text="Import WarCraft MDL")
+
+def register():
+	bpy.utils.register_class(ImportWarMDL)
+	bpy.types.INFO_MT_file_import.append(menu_func_export)
+
+def unregister():
+	bpy.utils.unregister_class(ImportWarMDL)
+	bpy.types.INFO_MT_file_import.remove(menu_func_export)
+
+if __name__ == "__main__":
+	register()
+
+	# test call
+	bpy.ops.import_mesh.warmdl('INVOKE_DEFAULT')
+

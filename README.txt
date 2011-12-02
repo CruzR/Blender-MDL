@@ -1,35 +1,24 @@
 What does currently work:
--------------------------
+=========================
 * Checking the version number, canceling if not 800
-* Loading the vertices, normals and texture coords of each geoset
+* Loading the vertices, normals, texture coords and faces of each geoset
 
 
 What doesn't work yet:
-----------------------
-* Integration with Blender
-* Everything else
-
-
-Dependencies:
--------------
-You need to have Python 3.x installed.
+======================
+* Actually _using_ the imported data. Currently, all this script does is to load
+  data and then print it to the terminal.
 
 
 Instructions:
--------------
-In a future release, this will be a Blender plugin.
-Currently, it isn't connected to Blender yet;
-you have to run it from Python manually.
+=============
 
-1. Start the Python shell from this directory
-2. Run:
+1. Open Blender, preferably from a terminal (otherwise you won't be able to see
+   the outcome of the script).
 
->>>	import importMDL
->>>	importMDL.run()
+2. In Blender, change the Screen-layout to 'Scripting'.
 
-3. The program will ask you to enter the path to the MDL file.
-   The path can either be absolute or relative.
+3. In the Text editor window, open Text->Open Text Block. Then choose the file
+   called 'WarMDLImport.py'.
 
-4. The program will read the file and, if nothing goes wrong, print some debug
-   information and the vertices, normals and texture coords ('tvertices') of
-   each geoset to the console. (That's all it currently does.)
+4. In the Text editor window, hit the 'Run Script' button.
