@@ -2,6 +2,7 @@ import bpy
 import string
 import io
 import pdb
+import time
 
 from bpy_extras.io_utils import ImportHelper
 from bpy.props import StringProperty
@@ -74,11 +75,49 @@ class BaseHandler:
 		return ['SEARCH', cargo]
 
 class Geoset:
-	def __init__(self, vertices=[], normals=[], tvertices=[], faces=[]):
-		self.vertices = vertices
-		self.normals = normals
-		self.tvertices = tvertices
-		self.faces = faces
+	vertices = []
+	normals = []
+	tvertices = []
+	faces = []
+
+class GeosetManager:
+	def __init__(self):
+		self.vertices = [[]]
+		self.normals = [[]]
+		self.tvertices = [[]]
+		self.faces = [[]]
+		self.cnt = 0
+		self.add_new = False
+		
+	def new_geoset(self):
+		self.vertices.append([])
+		self.normals.append([])
+		self.tvertices.append([])
+		self.faces.append([])
+		self.cnt += 1
+		self.add_new = False
+	
+	def append(self, li, cont):
+		if cont == 'vertices':
+			self.vertices[self.cnt].append(li)
+		elif cont == 'normals':
+			self.normals[self.cnt].append(li)
+		elif cont == 'tvertices':
+			self.tvertices[self.cnt].append(li)
+		elif cont == 'faces':
+			self.faces[self.cnt].append(li)
+	
+	def extend(self, li, cont):
+		if cont == 'vertices':
+			self.vertices[self.cnt].extend(li)
+		elif cont == 'normals':
+			self.normals[self.cnt].extend(li)
+		elif cont == 'tvertices':
+			self.tvertices[self.cnt].extend(li)
+		elif cont == 'faces':
+			self.faces[self.cnt].extend(li)
+			self.add_new = True
+
 class SEARCH(BaseHandler):
 	def run(self, cargo):
 		newState, cargo = BaseHandler.run(self, cargo)
@@ -108,14 +147,10 @@ class VERSION(BaseHandler):
 class GEOSET(BaseHandler):
 	def run(self, cargo):
 		#print('GEOSET')
+		pdb.set_trace()
 		if cargo['prev_handler'] == 'SEARCH':
-			try:
-				cargo['geoindex'] += 1
-				print('++')
-			except:
-				cargo['geoindex'] = 0
-			g = Geoset()
-			self.parent.geosets.append(g)
+			if self.parent.mgr.add_new:
+				self.parent.mgr.new_geoset()
 			cargo['p'] = 1
 		
 		newState, cargo = BaseHandler.run(self, cargo)
@@ -137,7 +172,7 @@ class VERTICES(BaseHandler):
 		for i in range(int(cargo['last'].strip().split()[1])):
 			current = self.parent.infile.readline().strip().strip('{},;')
 			li = [(float(n)/20) for n in current.split(', ')]
-			self.parent.geosets[cargo['geoindex']].vertices.append(li)
+			self.parent.mgr.append(li, 'vertices')
 		return ['GEOSET', cargo]
 
 class NORMALS(BaseHandler):
@@ -146,7 +181,7 @@ class NORMALS(BaseHandler):
 		for i in range(int(cargo['last'].strip().split()[1])):
 			current = self.parent.infile.readline().strip().strip('{},;')
 			li = [float(n) for n in current.split(', ')]
-			self.parent.geosets[cargo['geoindex']].normals.append(li)
+			self.parent.mgr.append(li, 'normals')
 		return ['GEOSET', cargo]
 
 class TVERTICES(BaseHandler):
@@ -155,7 +190,7 @@ class TVERTICES(BaseHandler):
 		for i in range(int(cargo['last'].strip().split()[1])):
 			current = self.parent.infile.readline().strip().strip('{},:')
 			li = [(float(n)/20.0) for n in current.split(', ')]
-			self.parent.geosets[cargo['geoindex']].tvertices.append(li)
+			self.parent.mgr.append(li, 'tvertices')
 		return ['GEOSET', cargo]
 
 class FACES(BaseHandler):
@@ -170,14 +205,15 @@ class FACES(BaseHandler):
 					li += [int(n) for n in self.parent.infile.readline().strip().strip('{},;').split(', ')]
 		if dbg: print(len(li))
 		for i in range(cnt//3):
-			self.parent.geosets[cargo['geoindex']].faces.append([li[3*i], li[3*i+1], li[3*i+2]])
+			self.parent.mgr.append([li[3*i], li[3*i+1], li[3*i+2]], 'faces')
 		return ['GEOSET', cargo]
 
 class DataImporter:
+	start_time = time.time()
 	infile = None
 	globalkeys = ['Version', 'Geoset']
 	geosetkeys = ['Vertices', 'Normals', 'TVertices', 'Faces']
-	geosets = []
+	mgr = GeosetManager()
 	
 	def run(self, filepath, context):
 		print("Opening {}...".format(filepath))
@@ -194,16 +230,14 @@ class DataImporter:
 		m.run()
 		
 		# TODO: Actually use the gathered data
-		counter = 0
-		for geoset in self.geosets:
+		for i in range(self.mgr.cnt + 1):
 			#if dbg: print('Vertices: {}'.format(geoset.vertices)); print('Normals: {}'.format(geoset.normals))#; print('TVertices: {}'.format(geoset.tvertices))
-			mesh = bpy.data.meshes.new("Geoset{}".format(counter))
-			mesh.from_pydata(geoset.vertices, [], geoset.faces)
+			mesh = bpy.data.meshes.new("Geoset{}".format(i))
+			mesh.from_pydata(self.mgr.vertices[i], [], self.mgr.faces[i])
 			mesh.update()
 			object_utils.object_data_add(context, mesh)
-			counter += 1
-			pdb.set_trace()
 		
+		print("Script finished after %.4f seconds" % time.time() - start_time)
 		return {'FINISHED'}
 
 class ImportWarMDL(bpy.types.Operator, ImportHelper):
