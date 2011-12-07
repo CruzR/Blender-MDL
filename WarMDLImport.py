@@ -8,7 +8,7 @@ from bpy_extras.io_utils import ImportHelper
 from bpy.props import StringProperty
 from bpy_extras import object_utils
 
-dbg = True
+dbg = False
 
 # TODO: Add addon description
 # TODO: Add more comments
@@ -74,12 +74,6 @@ class BaseHandler:
 		print(cargo['prev_handler'])
 		return ['SEARCH', cargo]
 
-class Geoset:
-	vertices = []
-	normals = []
-	tvertices = []
-	faces = []
-
 class GeosetManager:
 	def __init__(self):
 		self.vertices = [[]]
@@ -106,6 +100,7 @@ class GeosetManager:
 			self.tvertices[self.cnt].append(li)
 		elif cont == 'faces':
 			self.faces[self.cnt].append(li)
+			self.add_new = True
 	
 	def extend(self, li, cont):
 		if cont == 'vertices':
@@ -147,7 +142,7 @@ class VERSION(BaseHandler):
 class GEOSET(BaseHandler):
 	def run(self, cargo):
 		#print('GEOSET')
-		pdb.set_trace()
+		if dbg: pdb.set_trace()
 		if cargo['prev_handler'] == 'SEARCH':
 			if self.parent.mgr.add_new:
 				self.parent.mgr.new_geoset()
@@ -209,13 +204,13 @@ class FACES(BaseHandler):
 		return ['GEOSET', cargo]
 
 class DataImporter:
-	start_time = time.time()
 	infile = None
 	globalkeys = ['Version', 'Geoset']
 	geosetkeys = ['Vertices', 'Normals', 'TVertices', 'Faces']
 	mgr = GeosetManager()
 	
 	def run(self, filepath, context):
+		start_time = time.time()
 		print("Opening {}...".format(filepath))
 		self.infile = open(filepath, 'r')
 		m = StateMachine(parent=self)
@@ -229,15 +224,16 @@ class DataImporter:
 		m.add('EOF', None, endState=True)
 		m.run()
 		
-		# TODO: Actually use the gathered data
-		for i in range(self.mgr.cnt + 1):
-			#if dbg: print('Vertices: {}'.format(geoset.vertices)); print('Normals: {}'.format(geoset.normals))#; print('TVertices: {}'.format(geoset.tvertices))
+		if dbg: pdb.set_trace()
+		for i in range(self.mgr.cnt + 1): 
 			mesh = bpy.data.meshes.new("Geoset{}".format(i))
 			mesh.from_pydata(self.mgr.vertices[i], [], self.mgr.faces[i])
 			mesh.update()
 			object_utils.object_data_add(context, mesh)
+			if dbg: pdb.set_trace()
+			del mesh
 		
-		print("Script finished after %.4f seconds" % time.time() - start_time)
+		print("Script finished after {} seconds".format(time.time() - start_time))
 		return {'FINISHED'}
 
 class ImportWarMDL(bpy.types.Operator, ImportHelper):
