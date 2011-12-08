@@ -1,3 +1,14 @@
+# Copyright (c) 2011 Thomas Glamsch
+# 
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2 of the License, or (at your option) any later
+# version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
 import bpy
 import string
 import io
@@ -10,7 +21,19 @@ from bpy_extras import object_utils
 
 dbg = False
 
-# TODO: Add addon description
+bl_info = {
+	"name": "Import WarCraft MDL (.mdl)",
+	"description": "This addon allows you to import WarCraft MDL model files (.mdl).",
+	"author": "Thomas 'CruzR' Glamsch",
+	"version": (0, 1),
+	"blender": (2, 5, 7),
+	#"api": ???,
+	"location": "File > Import > WarCraft MDL (.mdl)",
+	"warning": "Currently only the vertices and faces are imported, work in progress.",
+	"wiki_url": "http://wiki.blender.org/index.php/Extensions:2.5/Py/Scripts/Import-Export/WarCraft_MDL",
+	#"tracker_url": ???,
+	"category": "Import-Export"}
+
 # TODO: Add more comments
 
 # This is our abstract state machine
@@ -237,9 +260,9 @@ class DataImporter:
 		return {'FINISHED'}
 
 class ImportWarMDL(bpy.types.Operator, ImportHelper):
-	'''Bla bla bla!'''
+	'''Import from WarCraft MDL model format (.mdl).'''
 	bl_idname = "import_mesh.warmdl"
-	bl_label = "Import WarCraft MDL"
+	bl_label = "WarCraft MDL (.mdl)"
 	
 	filename_ext = ".mdl"
 	
@@ -257,7 +280,7 @@ class ImportWarMDL(bpy.types.Operator, ImportHelper):
 		return di.run(self.filepath, context)
 
 def menu_func_export(self, context):
-	self.layout.operator(ImportWarMDL.bl_idname, text="Import WarCraft MDL")
+	self.layout.operator(ImportWarMDL.bl_idname, text="WarCraft MDL (.mdl)")
 
 def register():
 	bpy.utils.register_class(ImportWarMDL)
