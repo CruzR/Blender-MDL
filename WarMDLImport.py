@@ -67,6 +67,8 @@ class StateMachine:
 		name = name.upper()
 		if name in self.handlers:
 			self.startState = name
+		else:
+			raise Exception("Error: set_start(): Unknown state: {}".format(name))
 
 # @param cargo: Some kind of information to carry through the states
 	def run(self, cargo={}):
@@ -95,7 +97,7 @@ class BaseHandler:
 	def run(self, cargo):
 		cargo['prev_handler'] = self.__class__.__name__
 		print(cargo['prev_handler'])
-		return ['SEARCH', cargo]
+		return 'SEARCH', cargo
 
 class GeosetManager:
 	def __init__(self):
@@ -152,7 +154,7 @@ class SEARCH(BaseHandler):
 				break
 	
 		#print('GOTO {}'.format(newState))
-		return [newState, cargo]
+		return newState, cargo
 
 class VERSION(BaseHandler):
 	def run(self, cargo):
@@ -160,7 +162,7 @@ class VERSION(BaseHandler):
 		#print('VERSION')
 		if int(self.parent.infile.readline().strip().strip(',').split()[1]) != 800:
 			raise Exception("This MDL Version is not supported!")
-		return ['SEARCH', cargo]
+		return 'SEARCH', cargo
 
 class GEOSET(BaseHandler):
 	def run(self, cargo):
@@ -182,7 +184,7 @@ class GEOSET(BaseHandler):
 				newState = current.split()[0].upper()
 				break
 	
-		return [newState, cargo]
+		return newState, cargo
 
 class VERTICES(BaseHandler):
 	def run(self, cargo):
@@ -191,7 +193,7 @@ class VERTICES(BaseHandler):
 			current = self.parent.infile.readline().strip().strip('{},;')
 			li = [(float(n)/20) for n in current.split(', ')]
 			self.parent.mgr.append(li, 'vertices')
-		return ['GEOSET', cargo]
+		return 'GEOSET', cargo
 
 class NORMALS(BaseHandler):
 	def run(self, cargo):
@@ -200,7 +202,7 @@ class NORMALS(BaseHandler):
 			current = self.parent.infile.readline().strip().strip('{},;')
 			li = [float(n) for n in current.split(', ')]
 			self.parent.mgr.append(li, 'normals')
-		return ['GEOSET', cargo]
+		return 'GEOSET', cargo
 
 class TVERTICES(BaseHandler):
 	def run(self, cargo):
@@ -209,7 +211,7 @@ class TVERTICES(BaseHandler):
 			current = self.parent.infile.readline().strip().strip('{},:')
 			li = [(float(n)/20.0) for n in current.split(', ')]
 			self.parent.mgr.append(li, 'tvertices')
-		return ['GEOSET', cargo]
+		return 'GEOSET', cargo
 
 class FACES(BaseHandler):
 	def run(self, cargo):
@@ -224,7 +226,7 @@ class FACES(BaseHandler):
 		if dbg: print(len(li))
 		for i in range(cnt//3):
 			self.parent.mgr.append([li[3*i], li[3*i+1], li[3*i+2]], 'faces')
-		return ['GEOSET', cargo]
+		return 'GEOSET', cargo
 
 class DataImporter:
 	infile = None
