@@ -17,7 +17,6 @@ import time
 
 from bpy_extras.io_utils import ImportHelper
 from bpy.props import StringProperty
-from bpy_extras import object_utils
 
 dbg = False
 
@@ -25,7 +24,7 @@ bl_info = {
 	"name": "Import WarCraft MDL (.mdl)",
 	"description": "This addon allows you to import WarCraft MDL model files (.mdl).",
 	"author": "Thomas 'CruzR' Glamsch",
-	"version": (0, 1),
+	"version": (0, 1, 1),
 	"blender": (2, 5, 7),
 	#"api": ???,
 	"location": "File > Import > WarCraft MDL (.mdl)",
@@ -72,9 +71,8 @@ class StateMachine:
 
 # @param cargo: Some kind of information to carry through the states
 	def run(self, cargo={}):
-		try:
-			handler = self.handlers[self.startState]
-		except:
+		handler = self.handlers.get(self.startState)
+		if not handler:
 			raise Exception("InitError: Set startState before calling StateMachine.run()")
 		if not self.endStates:
 			raise Exception("InitError: There must be at least one endstate")
@@ -250,13 +248,16 @@ class DataImporter:
 		m.run()
 		
 		if dbg: pdb.set_trace()
-		for i in range(self.mgr.cnt + 1): 
-			mesh = bpy.data.meshes.new("Geoset{}".format(i))
+		for i in range(self.mgr.cnt + 1):
+			mesh = bpy.data.meshes.new("Geoset{}Mesh".format(i))
+			obj = bpy.data.objects.new("Geoset{}".format(i), mesh)
+			obj.location = (0.0, 0.0, 0.0)
+			bpy.context.scene.objects.link(obj)
 			mesh.from_pydata(self.mgr.vertices[i], [], self.mgr.faces[i])
 			mesh.update()
-			object_utils.object_data_add(context, mesh)
 			if dbg: pdb.set_trace()
 			del mesh
+			del obj
 		
 		print("Script finished after {} seconds".format(time.time() - start_time))
 		return {'FINISHED'}
