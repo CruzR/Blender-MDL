@@ -287,9 +287,9 @@ class DataImporter:
 			uvtex = mesh.uv_textures.new(name="uvtex{}".format(i))
 			for n, face in enumerate(self.mgr.faces[i]):
 				texface = uvtex.data[n]
-				texface.uv1 = self.mgr.tvertices[i][face[0]]
-				texface.uv2 = self.mgr.tvertices[i][face[1]]
-				texface.uv3 = self.mgr.tvertices[i][face[2]]
+				texface.uv1 = (self.mgr.tvertices[i][face[0]][0], 1 - self.mgr.tvertices[i][face[0]][1])
+				texface.uv2 = (self.mgr.tvertices[i][face[1]][0], 1 - self.mgr.tvertices[i][face[1]][1])
+				texface.uv3 = (self.mgr.tvertices[i][face[2]][0], 1 - self.mgr.tvertices[i][face[2]][1])
 			
 			if dbg: pdb.set_trace()
 			# Delete the mesh and obj pointer to make sure we don't override
