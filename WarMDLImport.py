@@ -207,7 +207,7 @@ class TVERTICES(BaseHandler):
 		cargo = BaseHandler.run(self, cargo)[1]
 		for i in range(int(cargo['last'].strip().split()[1])):
 			current = self.parent.infile.readline().strip().strip('{},:')
-			li = [(float(n)/20.0) for n in current.split(', ')]
+			li = [float(n) for n in current.split(', ')]
 			self.parent.mgr.append(li, 'tvertices')
 		return 'GEOSET', cargo
 
@@ -255,6 +255,13 @@ class DataImporter:
 			bpy.context.scene.objects.link(obj)
 			mesh.from_pydata(self.mgr.vertices[i], [], self.mgr.faces[i])
 			mesh.update()
+			uvtex = mesh.uv_textures.new(name="uvtex{}".format(i))
+			for n, face in enumerate(self.mgr.faces[i]):
+				texface = uvtex.data[n]
+				texface.uv1 = self.mgr.tvertices[i][face[0]]
+				texface.uv2 = self.mgr.tvertices[i][face[1]]
+				texface.uv3 = self.mgr.tvertices[i][face[2]]
+			
 			if dbg: pdb.set_trace()
 			del mesh
 			del obj
