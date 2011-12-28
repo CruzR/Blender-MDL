@@ -33,8 +33,6 @@ bl_info = {
 	"tracker_url": "http://projects.blender.org/tracker/index.php?func=detail&aid=29552",
 	"category": "Import-Export"}
 
-# TODO: Add more comments
-
 # This is our abstract state machine
 class StateMachine:
 
@@ -97,6 +95,7 @@ class BaseHandler:
 		print(cargo['prev_handler'])
 		return 'SEARCH', cargo
 
+# Our geosets are managed by this class
 class GeosetManager:
 	def __init__(self):
 		self.vertices = [[]]
@@ -114,6 +113,9 @@ class GeosetManager:
 		self.cnt += 1
 		self.add_new = False
 	
+	# @param li: List of data to be added to our geoset.
+	# @param cont: Type of the data to be added. One of 'vertices', 'normals',
+	# 'tvertices' and 'faces'.
 	def append(self, li, cont):
 		if cont == 'vertices':
 			self.vertices[self.cnt].append(li)
@@ -125,6 +127,9 @@ class GeosetManager:
 			self.faces[self.cnt].append(li)
 			self.add_new = True
 	
+	# @param li: List of data to be added to our geoset.
+	# @param cont: Type of the data to be added. One of 'vertices', 'normals',
+	# 'tvertices' and 'faces'.
 	def extend(self, li, cont):
 		if cont == 'vertices':
 			self.vertices[self.cnt].extend(li)
@@ -136,35 +141,39 @@ class GeosetManager:
 			self.faces[self.cnt].extend(li)
 			self.add_new = True
 
+# This is our main handler.
 class SEARCH(BaseHandler):
 	def run(self, cargo):
 		newState, cargo = BaseHandler.run(self, cargo)
-		#print('SEARCH')
+		
 		while True:
 			cargo['last'] = current = self.parent.infile.readline()
+			# Stop when end of the file is reached.
 			if current == '' :
 				newState = 'EOF'
 				break
+			# Skip comments.
 			elif current.strip().startswith('//'):
 				continue
+			# If the line starts with a keyword from DataImporter.globalkeys,
+			# start the appropiate handler.
 			elif current.strip().split()[0] in self.parent.globalkeys:
 				newState = current.strip().split()[0].upper()
 				break
-	
-		#print('GOTO {}'.format(newState))
+		
 		return newState, cargo
 
+# This handler just makes sure that our file has the correct MDL version.
 class VERSION(BaseHandler):
 	def run(self, cargo):
 		cargo = BaseHandler.run(self, cargo)[1]
-		#print('VERSION')
 		if int(self.parent.infile.readline().strip().strip(',').split()[1]) != 800:
 			raise Exception("This MDL Version is not supported!")
 		return 'SEARCH', cargo
 
+# This handler deals with the content inside a Geoset block.
 class GEOSET(BaseHandler):
 	def run(self, cargo):
-		#print('GEOSET')
 		if dbg: pdb.set_trace()
 		if cargo['prev_handler'] == 'SEARCH':
 			if self.parent.mgr.add_new:
@@ -176,44 +185,58 @@ class GEOSET(BaseHandler):
 		while cargo['p'] > 0:
 			cargo['last'] = current = self.parent.infile.readline()
 			current = current.strip()
+			# We count the braces to find out when a Geoset block ends.
 			if '{' in current: cargo['p'] += 1
 			if '}' in current: cargo['p'] -= 1
+			# If a line starts with an keyword from DataImporter.geosetkeys,
+			# start the appropiate handler.
 			if current.split()[0] in self.parent.geosetkeys:
 				newState = current.split()[0].upper()
 				break
 	
 		return newState, cargo
 
+# This handler imports the vertices inside a Geoset block.
 class VERTICES(BaseHandler):
 	def run(self, cargo):
 		cargo = BaseHandler.run(self, cargo)[1]
+		# Get the number of vertices inside this Vertices block.
 		for i in range(int(cargo['last'].strip().split()[1])):
 			current = self.parent.infile.readline().strip().strip('{},;')
+			# Divide with 20 to scale the model down.
 			li = [(float(n)/20) for n in current.split(', ')]
 			self.parent.mgr.append(li, 'vertices')
 		return 'GEOSET', cargo
 
+# This handler imports the vertex normals.
+# TODO: Use vertex normals in Blender.
 class NORMALS(BaseHandler):
 	def run(self, cargo):
 		cargo = BaseHandler.run(self, cargo)[1]
+		# Get the number of normals inside this Normals block.
 		for i in range(int(cargo['last'].strip().split()[1])):
 			current = self.parent.infile.readline().strip().strip('{},;')
 			li = [float(n) for n in current.split(', ')]
 			self.parent.mgr.append(li, 'normals')
 		return 'GEOSET', cargo
 
+# This handler imports the texture vertices (aka the UV layout).
 class TVERTICES(BaseHandler):
 	def run(self, cargo):
 		cargo = BaseHandler.run(self, cargo)[1]
+		# Get the number of vertices inside this Normals block.
 		for i in range(int(cargo['last'].strip().split()[1])):
 			current = self.parent.infile.readline().strip().strip('{},:')
 			li = [float(n) for n in current.split(', ')]
 			self.parent.mgr.append(li, 'tvertices')
 		return 'GEOSET', cargo
 
+# This handler imports the faces inside a Geoset block.
 class FACES(BaseHandler):
 	def run(self, cargo):
 		cargo = BaseHandler.run(self, cargo)[1]
+		# Faces is a strange construction. grps is the number of data blocks,
+		# cnt the total amount of vertex indices.
 		grps, cnt = [int(n) for n in cargo['last'].strip().split()[1:3]]
 		li = []
 		while len(li) < cnt:
@@ -226,6 +249,8 @@ class FACES(BaseHandler):
 			self.parent.mgr.append([li[3*i], li[3*i+1], li[3*i+2]], 'faces')
 		return 'GEOSET', cargo
 
+# This class initiates and starts the state machine and uses the gathered data
+# to construct the model in Blender.
 class DataImporter:
 	infile = None
 	globalkeys = ['Version', 'Geoset']
@@ -248,13 +273,17 @@ class DataImporter:
 		m.run()
 		
 		if dbg: pdb.set_trace()
+		# Construct an own object for each geoset.
 		for i in range(self.mgr.cnt + 1):
+			# Create an object and link it to the scene.
 			mesh = bpy.data.meshes.new("Geoset{}Mesh".format(i))
 			obj = bpy.data.objects.new("Geoset{}".format(i), mesh)
 			obj.location = (0.0, 0.0, 0.0)
 			bpy.context.scene.objects.link(obj)
+			# Construct the mesh from the gathered vertex and face data.
 			mesh.from_pydata(self.mgr.vertices[i], [], self.mgr.faces[i])
 			mesh.update()
+			# Create the UV layout.
 			uvtex = mesh.uv_textures.new(name="uvtex{}".format(i))
 			for n, face in enumerate(self.mgr.faces[i]):
 				texface = uvtex.data[n]
@@ -263,14 +292,17 @@ class DataImporter:
 				texface.uv3 = self.mgr.tvertices[i][face[2]]
 			
 			if dbg: pdb.set_trace()
+			# Delete the mesh and obj pointer to make sure we don't override
+			# the just created object.
 			del mesh
 			del obj
 		
 		print("Script finished after {} seconds".format(time.time() - start_time))
 		return {'FINISHED'}
 
+# This is the import operator.
 class ImportWarMDL(bpy.types.Operator, ImportHelper):
-	'''Import from WarCraft MDL model format (.mdl).'''
+	'''Import from WarCraft MDL model format (.mdl)'''
 	bl_idname = "import_mesh.warmdl"
 	bl_label = "WarCraft MDL (.mdl)"
 	
