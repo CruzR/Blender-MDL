@@ -217,7 +217,7 @@ class NORMALS(BaseHandler):
 		for i in range(int(cargo['last'].strip().split()[1])):
 			current = self.parent.infile.readline().strip().strip('{},;')
 			li = [float(n) for n in current.split(', ')]
-			self.parent.mgr.append(li, 'normals')
+			self.parent.mgr.extend(li, 'normals')
 		return 'GEOSET', cargo
 
 # This handler imports the texture vertices (aka the UV layout).
@@ -290,6 +290,8 @@ class DataImporter:
 				texface.uv1 = (self.mgr.tvertices[i][face[0]][0], 1 - self.mgr.tvertices[i][face[0]][1])
 				texface.uv2 = (self.mgr.tvertices[i][face[1]][0], 1 - self.mgr.tvertices[i][face[1]][1])
 				texface.uv3 = (self.mgr.tvertices[i][face[2]][0], 1 - self.mgr.tvertices[i][face[2]][1])
+			# Set the normals
+			mesh.vertices.foreach_set('normal', self.mgr.normals[i])
 			
 			if dbg: pdb.set_trace()
 			# Delete the mesh and obj pointer to make sure we don't override
