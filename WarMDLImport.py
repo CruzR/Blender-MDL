@@ -24,7 +24,7 @@ bl_info = {
 	"name": "Import WarCraft MDL (.mdl)",
 	"description": "This addon allows you to import WarCraft MDL model files (.mdl).",
 	"author": "Thomas 'CruzR' Glamsch",
-	"version": (0, 1, 1),
+	"version": (0, 2),
 	"blender": (2, 5, 7),
 	#"api": ???,
 	"location": "File > Import > WarCraft MDL (.mdl)",
