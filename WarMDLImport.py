@@ -209,7 +209,6 @@ class VERTICES(BaseHandler):
 		return 'GEOSET', cargo
 
 # This handler imports the vertex normals.
-# TODO: Use vertex normals in Blender.
 class NORMALS(BaseHandler):
 	def run(self, cargo):
 		cargo = BaseHandler.run(self, cargo)[1]
@@ -249,13 +248,34 @@ class FACES(BaseHandler):
 			self.parent.mgr.append([li[3*i], li[3*i+1], li[3*i+2]], 'faces')
 		return 'GEOSET', cargo
 
+# This handles the Model block
+class MODEL(BaseHandler):
+	def run(self, cargo):
+		next, cargo = BaseHandler.run(self, cargo)
+		# Store the model's name
+		self.parent.model_info['name'] = cargo['last'].split()[1].strip('\"')
+		# Count curled braces to stop loop when the block ends
+		cargo['p'] = 1
+		while cargo['p'] > 0:
+			current = self.parent.infile.readline()
+			if '{' in current: cargo['p'] += 1
+			if '}' in current: cargo['p'] -= 1
+			key = current.strip().split()[0]
+			# Only two keys are interesting: 'BoundsRadius' & 'BlendTime'
+			if key == 'BoundsRadius':
+				self.parent.model_info[key] = float(current.strip().split()[1].strip(','))
+			elif key == 'BlendTime':
+				self.parent.model_info[key] = int(current.strip().split()[1].strip(','))
+		return next, cargo
+
 # This class initiates and starts the state machine and uses the gathered data
 # to construct the model in Blender.
 class DataImporter:
 	infile = None
-	globalkeys = ['Version', 'Geoset']
+	globalkeys = ['Version', 'Model', 'Geoset']
 	geosetkeys = ['Vertices', 'Normals', 'TVertices', 'Faces']
 	mgr = GeosetManager()
+	model_info = {}
 	
 	def run(self, filepath, context):
 		start_time = time.time()
@@ -264,6 +284,7 @@ class DataImporter:
 		m = StateMachine(parent=self)
 		m.add('SEARCH', SEARCH, startState=True)
 		m.add('VERSION', VERSION)
+		m.add('MODEL', MODEL)
 		m.add('GEOSET', GEOSET)
 		m.add('VERTICES', VERTICES)
 		m.add('NORMALS', NORMALS)
@@ -276,8 +297,8 @@ class DataImporter:
 		# Construct an own object for each geoset.
 		for i in range(self.mgr.cnt + 1):
 			# Create an object and link it to the scene.
-			mesh = bpy.data.meshes.new("Geoset{}Mesh".format(i))
-			obj = bpy.data.objects.new("Geoset{}".format(i), mesh)
+			mesh = bpy.data.meshes.new("{name}{i}Mesh".format(name=self.model_info['name'], i=i))
+			obj = bpy.data.objects.new("{name}{i}".format(name=self.model_info['name'], i=i), mesh)
 			obj.location = (0.0, 0.0, 0.0)
 			bpy.context.scene.objects.link(obj)
 			# Construct the mesh from the gathered vertex and face data.
