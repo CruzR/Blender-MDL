@@ -11,7 +11,6 @@
 
 import bpy
 import string
-import io
 import pdb
 import time
 
@@ -24,8 +23,8 @@ bl_info = {
 	"name": "Import WarCraft MDL (.mdl)",
 	"description": "This addon allows you to import WarCraft MDL model files (.mdl).",
 	"author": "Thomas 'CruzR' Glamsch",
-	"version": (0, 2),
-	"blender": (2, 5, 7),
+	"version": (0, 2, 1),
+	"blender": (2, 6, 3),
 	#"api": ???,
 	"location": "File > Import > WarCraft MDL (.mdl)",
 	"warning": "Currently only the vertices and faces are imported, work in progress.",
@@ -204,8 +203,8 @@ class VERTICES(BaseHandler):
 		for i in range(int(cargo['last'].strip().split()[1])):
 			current = self.parent.infile.readline().strip().strip('{},;')
 			# Divide with 20 to scale the model down.
-			li = [(float(n)/20) for n in current.split(', ')]
-			self.parent.mgr.append(li, 'vertices')
+			li = [float(n)/20 for n in current.split(', ')]
+			self.parent.mgr.extend(li, 'vertices')
 		return 'GEOSET', cargo
 
 # This handler imports the vertex normals.
@@ -226,7 +225,7 @@ class TVERTICES(BaseHandler):
 		# Get the number of vertices inside this Normals block.
 		for i in range(int(cargo['last'].strip().split()[1])):
 			current = self.parent.infile.readline().strip().strip('{},:')
-			li = [float(n) for n in current.split(', ')]
+			li = tuple(float(n) for n in current.split(', '))
 			self.parent.mgr.append(li, 'tvertices')
 		return 'GEOSET', cargo
 
@@ -244,8 +243,9 @@ class FACES(BaseHandler):
 				for i in range(grps):
 					li += [int(n) for n in self.parent.infile.readline().strip().strip('{},;').split(', ')]
 		if dbg: print(len(li))
-		for i in range(cnt//3):
-			self.parent.mgr.append([li[3*i], li[3*i+1], li[3*i+2]], 'faces')
+		for i in range(cnt):
+			self.parent.mgr.append(li[i], 'faces')
+			if i % 3 == 2: self.parent.mgr.append(li[i], 'faces')
 		return 'GEOSET', cargo
 
 # This handles the Model block
@@ -302,18 +302,21 @@ class DataImporter:
 			obj.location = (0.0, 0.0, 0.0)
 			bpy.context.scene.objects.link(obj)
 			# Construct the mesh from the gathered vertex and face data.
-			mesh.from_pydata(self.mgr.vertices[i], [], self.mgr.faces[i])
-			mesh.update()
+			mesh.vertices.add(len(self.mgr.vertices[i]) // 3)
+			mesh.vertices.foreach_set('co', self.mgr.vertices[i])
+			mesh.tessfaces.add(len(self.mgr.faces[i]) // 4)
+			mesh.tessfaces.foreach_set('vertices', self.mgr.faces[i])
 			# Create the UV layout.
-			uvtex = mesh.uv_textures.new(name="uvtex{}".format(i))
-			for n, face in enumerate(self.mgr.faces[i]):
+			uvtex = mesh.tessface_uv_textures.new(name="uvtex{}".format(i))
+			for n in range(len(self.mgr.faces[i]) // 4):
+				face = self.mgr.faces[i][n * 4:n * 4 + 3]
 				texface = uvtex.data[n]
 				texface.uv1 = (self.mgr.tvertices[i][face[0]][0], 1 - self.mgr.tvertices[i][face[0]][1])
 				texface.uv2 = (self.mgr.tvertices[i][face[1]][0], 1 - self.mgr.tvertices[i][face[1]][1])
 				texface.uv3 = (self.mgr.tvertices[i][face[2]][0], 1 - self.mgr.tvertices[i][face[2]][1])
 			# Set the normals
 			mesh.vertices.foreach_set('normal', self.mgr.normals[i])
-			
+			mesh.update()
 			if dbg: pdb.set_trace()
 			# Delete the mesh and obj pointer to make sure we don't override
 			# the just created object.
