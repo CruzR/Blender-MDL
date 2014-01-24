@@ -1,4 +1,5 @@
-                             WarCraft MDL Importer
+WarCraft MDL Importer
+=====================
 
 What is this?
 -------------
