@@ -48,18 +48,21 @@ class ModelInfo:
 
     This class exposes the following member variables:
 
+    name: Name of the model (str)
     bounds_radius: ??? (float)
     minimum_extent: ??? (triple of floats)
     maximum_extent: ??? (triple of floats)
     blend_time: ??? (int)
 
     """
-    def __init__(self, bounds_radius, min_extent, max_extent, blend_time):
+    def __init__(self, name, bounds_radius, min_extent, max_extent, blend_time):
+        _assert_ascii_len(name, 0x150)
         _assert_float(bounds_radius)
         _assert_float_triple(min_extent)
         _assert_float_triple(max_extent)
         _assert_int(blend_time)
 
+        self.name = name
         self.bounds_radius = bounds_radius
         self.minimum_extent = min_extent
         self.maximum_extent = max_extent
@@ -67,6 +70,12 @@ class ModelInfo:
 
 
 # helper functions
+def _assert_ascii_len(x, n):
+    if not isinstance(x, str):
+        raise TypeError("must be a str")
+    if len(x.encode('ascii')) > n:
+        raise ValueError("must be <= %d bytes" % n)
+
 def _assert_int(x):
     if not isinstance(x, int):
         raise TypeError("must be an int")
