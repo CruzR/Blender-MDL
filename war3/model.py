@@ -91,22 +91,25 @@ class ModelInfo:
         )
 
 
-class Sequences(MutableSequence):
-    """A sequence container that accepts only Animation instances."""
-    def __init__(self, li=None):
+# helper class
+class _TypedList(MutableSequence):
+    def __init__(self, t, li=None):
+        self._type = t
         if li is None:
             self._li = []
-        else:
+        elif all(map(lambda x: isinstance(x, t), li)):
             self._li = li
+        else:
+            raise TypeError("type must be %s" % t.__name__)
 
     def __getitem__(self, key):
         return self._li[key]
 
     def __setitem__(self, key, value):
-        if isinstance(value, Animation):
+        if isinstance(value, self._type):
             self._li[key] = value
         else:
-            self._li[key] = Animation(*value)
+            self._li[key] = self._type(*value)
 
     def __delitem__(self, key):
         del self._li[key]
@@ -115,13 +118,19 @@ class Sequences(MutableSequence):
         return len(self._li)
 
     def insert(self, key, value):
-        if isinstance(value, Animation):
+        if isinstance(value, self._type):
             self._li.insert(key, value)
         else:
-            self._li.insert(key, Animation(*value))
+            self._li.insert(key, self._type(*value))
 
     def __repr__(self):
-        return "Sequences(%r)" % self._li
+        return "%s(%r)" % (self.__class__.__name__, self._li)
+
+
+class Sequences(_TypedList):
+    """A sequence container that accepts only Animation instances."""
+    def __init__(self, li=None):
+        _TypedList.__init__(self, Animation, li)
 
 
 class Animation:
@@ -194,6 +203,5 @@ def _assert_float_triple(x):
     if not isinstance(x, tuple) or not len(x) == 3 or \
             not all(map(lambda z: isinstance(z, float), x)):
         raise TypeError("must be a float triple")
-
 
 # vim: set ts=4 sw=4 et:
