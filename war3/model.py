@@ -1,7 +1,9 @@
 """This module contains the Model data structure."""
 
 
-__all__ = ["Model", "ModelInfo"]
+from collections.abc import MutableSequence
+
+__all__ = ["Model", "ModelInfo", "Sequences", "Animation"]
 
 
 class Model:
@@ -19,6 +21,8 @@ class Model:
     discouraged.
 
     """
+    def __init__(self):
+        self._seqs = Sequences()
 
     @property
     def version(self):
@@ -41,6 +45,18 @@ class Model:
             self._model = v
         else:
             self._model = ModelInfo(*v)
+
+    @property
+    def sequences(self):
+        """Collection of Animation objects."""
+        return self._seqs
+
+    @sequences.setter
+    def sequences(self, v):
+        if isinstance(v, Sequences):
+            self._seqs = v
+        else:
+            raise TypeError("must be a Sequences object")
 
 
 class ModelInfo:
@@ -69,6 +85,71 @@ class ModelInfo:
         self.blend_time = blend_time
 
 
+class Sequences(MutableSequence):
+    """A sequence container that accepts only Animation instances."""
+    def __init__(self, li=None):
+        if li is None:
+            self._li = []
+        else:
+            self._li = li
+
+    def __getitem__(self, key):
+        return self._li[key]
+
+    def __setitem__(self, key, value):
+        if isinstance(value, Animation):
+            self._li[key] = value
+        else:
+            self._li[key] = Animation(*value)
+
+    def __delitem__(self, key):
+        del self._li[key]
+
+    def __len__(self):
+        return len(self._li)
+
+    def insert(self, key, value):
+        if isinstance(value, Animation):
+            self._li.insert(key, value)
+        else:
+            self._li.insert(key, Animation(*value))
+
+
+class Animation:
+    """Metadata about an animation.
+
+    Exposed member variables:
+
+    name: Name of the animation (str)
+    interval: Time interval during which the animation plays (pair of ints)
+    move_speed: ??? (float)
+    non_looping: Whether the animation should be played only once (bool)
+    rarity: ??? (float)
+    bounds_radius: ??? (float)
+    minimum_extent: ??? (triple of floats)
+    maximum_extent: ??? (triple of floats)
+
+    """
+    def __init__(self, name, ival, speed, noloop, rare, bounds, minext, maxext):
+        _assert_ascii_len(name, 0x50)
+        _assert_int_pair(ival)
+        _assert_float(speed)
+        _assert_bool(noloop)
+        _assert_float(rare)
+        _assert_float(bounds)
+        _assert_float_triple(minext)
+        _assert_float_triple(maxext)
+
+        self.name = name
+        self.interval = ival
+        self.move_speed = speed
+        self.non_looping = noloop
+        self.rarity = rare
+        self.bounds_radius = bounds
+        self.minimum_extent = minext
+        self.maximum_extent = maxext
+
+
 # helper functions
 def _assert_ascii_len(x, n):
     if not isinstance(x, str):
@@ -76,9 +157,18 @@ def _assert_ascii_len(x, n):
     if len(x.encode('ascii')) > n:
         raise ValueError("must be <= %d bytes" % n)
 
+def _assert_bool(x):
+    if not isinstance(x, bool):
+        raise TypeError("must be a bool")
+
 def _assert_int(x):
     if not isinstance(x, int):
         raise TypeError("must be an int")
+
+def _assert_int_pair(x):
+    if not isinstance(x, tuple) or not len(x) == 2 or \
+            not all(map(lambda z: isinstance(z, int), x)):
+        raise TypeError("must be an int pair")
 
 def _assert_float(x):
     if not isinstance(x, float):
