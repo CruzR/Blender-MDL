@@ -3,7 +3,7 @@
 
 from collections.abc import MutableSequence
 
-__all__ = ["Model", "ModelInfo", "Sequences", "Animation"]
+__all__ = ["Model", "ModelInfo", "Sequences", "Animation", "GlobalSequences"]
 
 
 class Model:
@@ -23,6 +23,7 @@ class Model:
     """
     def __init__(self):
         self._seqs = Sequences()
+        self._glbs = GlobalSequences()
 
     @property
     def version(self):
@@ -57,6 +58,18 @@ class Model:
             self._seqs = v
         else:
             raise TypeError("must be a Sequences object")
+
+    @property
+    def global_sequences(self):
+        """Collection of durations (ints)."""
+        return self._glbs
+
+    @global_sequences.setter
+    def global_sequences(self, v):
+        if isinstance(v, GlobalSequences):
+            self._glbs = v
+        else:
+            raise TypeError("must be a GlobalSequences object")
 
 
 class ModelInfo:
@@ -173,6 +186,12 @@ class Animation:
             self.rarity, self.bounds_radius, self.minimum_extent,
             self.maximum_extent
         )
+
+
+class GlobalSequences(_TypedList):
+    """A sequence container that accepts only durations (ints)."""
+    def __init__(self, li=None):
+        _TypedList.__init__(self, int, li)
 
 
 # helper functions
