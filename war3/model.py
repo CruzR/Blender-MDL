@@ -84,6 +84,12 @@ class ModelInfo:
         self.maximum_extent = max_extent
         self.blend_time = blend_time
 
+    def __repr__(self):
+        return "ModelInfo(%r, %r, %r, %r, %r)" % (
+            self.name, self.bounds_radius, self.minimum_extent,
+            self.maximum_extent, self.blend_time
+        )
+
 
 class Sequences(MutableSequence):
     """A sequence container that accepts only Animation instances."""
@@ -113,6 +119,9 @@ class Sequences(MutableSequence):
             self._li.insert(key, value)
         else:
             self._li.insert(key, Animation(*value))
+
+    def __repr__(self):
+        return "Sequences(%r)" % self._li
 
 
 class Animation:
@@ -148,6 +157,13 @@ class Animation:
         self.bounds_radius = bounds
         self.minimum_extent = minext
         self.maximum_extent = maxext
+
+    def __repr__(self):
+        return "Animation(%r, %r, %r, %r, %r, %r, %r, %r)" % (
+            self.name, self.interval, self.move_speed, self.non_looping,
+            self.rarity, self.bounds_radius, self.minimum_extent,
+            self.maximum_extent
+        )
 
 
 # helper functions
