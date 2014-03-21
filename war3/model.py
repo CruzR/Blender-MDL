@@ -3,7 +3,10 @@
 
 from collections.abc import MutableSequence
 
-__all__ = ["Model", "ModelInfo", "Sequences", "Animation", "GlobalSequences"]
+__all__ = [
+    "Model", "ModelInfo", "Sequences", "Animation", "GlobalSequences",
+    "Materials", "Material", "Layer"
+]
 
 
 class Model:
@@ -24,6 +27,7 @@ class Model:
     def __init__(self):
         self._seqs = Sequences()
         self._glbs = GlobalSequences()
+        self._mtls = Materials()
 
     @property
     def version(self):
@@ -70,6 +74,18 @@ class Model:
             self._glbs = v
         else:
             raise TypeError("must be a GlobalSequences object")
+
+    @property
+    def materials(self):
+        """Collection of Material objects."""
+        return self._mtls
+
+    @materials.setter
+    def materials(self, v):
+        if isinstance(v, Materials):
+            self._mtls = v
+        else:
+            raise TypeError("must be a Materials object")
 
 
 class ModelInfo:
@@ -194,6 +210,103 @@ class GlobalSequences(_TypedList):
         _TypedList.__init__(self, int, li)
 
 
+class Materials(_TypedList):
+    """A sequence container that accepts only materials."""
+    def __init__(self, li=None):
+        _TypedList.__init__(self, Material, li)
+
+
+class Material(_TypedList):
+    """A list of Layers.
+
+    Exposed member variables:
+
+    priority_plane: ??? (int)
+    constant_color: ??? (bool)
+    sort_prims_far_z: ??? (bool)
+    full_resolution: ??? (bool)
+
+    """
+    def __init__(self, prio, const_color, sort_prims, full_res, lays=None):
+        _TypedList.__init__(self, Layer, lays)
+
+        _assert_int(prio)
+        _assert_bool(const_color)
+        _assert_bool(sort_prims)
+        _assert_bool(full_res)
+
+        self.priority_plane = prio
+        self.constant_color = const_color
+        self.sort_prims_far_z = sort_prims
+        self.full_resolution = full_res
+
+    def __repr__(self):
+        return "Material(%r, %r, %r, %r, %r)" % (
+            self.priority_plane, self.constant_color,
+            self.sort_prims_far_z, self.full_resolution, self._li
+        )
+
+
+class Layer:
+    """Class representing a single layer of a material.
+
+    Exposed member variables:
+
+    filter_mode: How to combine with other layers (one of the FM_ constants)
+    unshaded: ??? (bool)
+    sphere_env_map: ??? (bool)
+    twosided: Render the layer from both sides (bool)
+    unfogged: ??? (bool)
+    no_depth_test: ??? (bool)
+    no_depth_set: ??? (bool)
+    texture_id: Texture ID of the layer (int)
+    tvertex_anim_id: ??? (int)
+    coord_id: ??? (int)
+    alpha: Opacity of the layer (float, 0 == transparent, 1 == opaque)
+
+    """
+    FM_None = 0
+    FM_Transparent = 1
+    FM_Blend = 2
+    FM_Additive = 3
+    FM_AddAlpha = 4
+    FM_Modulate = 5
+
+    def __init__(self, fmode, noshade, senvmap, twosided, nofog,
+                 nodtest, nodset, tid, tvaid, cid, alpha):
+        _assert_int_range(fmode, Layer.FM_None, Layer.FM_Modulate)
+        _assert_bool(noshade)
+        _assert_bool(senvmap)
+        _assert_bool(twosided)
+        _assert_bool(nofog)
+        _assert_bool(nodtest)
+        _assert_bool(nodset)
+        _assert_int(tid)
+        _assert_int(tvaid)
+        _assert_int(cid)
+        _assert_float_range(alpha, 0.0, 1.0)
+
+        self.filter_mode = fmode
+        self.unshaded = noshade
+        self.sphere_env_map = senvmap
+        self.twosided = twosided
+        self.unfogged = nofog
+        self.no_depth_test = nodtest
+        self.no_depth_set = nodset
+        self.texture_id = tid
+        self.tvertex_anim_id = tvaid
+        self.coord_id = cid
+        self.alpha = alpha
+
+    def __repr__(self):
+        return "Layer(%r, %r, %r, %r, %r, %r, %r, %r, %r, %r, %r)" % (
+            self.filter_mode, self.unshaded, self.sphere_env_map,
+            self.twosided, self.unfogged, self.no_depth_test,
+            self.no_depth_set, self.texture_id, self.tvertex_anim_id,
+            self.coord_id, self.alpha
+        )
+
+
 # helper functions
 def _assert_ascii_len(x, n):
     if not isinstance(x, str):
@@ -209,6 +322,11 @@ def _assert_int(x):
     if not isinstance(x, int):
         raise TypeError("must be an int")
 
+def _assert_int_range(x, l, u):
+    _assert_int(x)
+    if not l <= x <= u:
+        raise ValueError("not %d <= %d <= %d" % (l, x, u))
+
 def _assert_int_pair(x):
     if not isinstance(x, tuple) or not len(x) == 2 or \
             not all(map(lambda z: isinstance(z, int), x)):
@@ -217,6 +335,11 @@ def _assert_int_pair(x):
 def _assert_float(x):
     if not isinstance(x, float):
         raise TypeError("must be a float")
+
+def _assert_float_range(x, l, u):
+    _assert_float(x)
+    if not l <= x <= u:
+        raise ValueError("not %d <= %d <= %d" % (l, x, u))
 
 def _assert_float_triple(x):
     if not isinstance(x, tuple) or not len(x) == 3 or \
