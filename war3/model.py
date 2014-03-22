@@ -5,7 +5,7 @@ from collections.abc import MutableSequence
 
 __all__ = [
     "Model", "ModelInfo", "Sequences", "Animation", "GlobalSequences",
-    "Materials", "Material", "Layer"
+    "Materials", "Material", "Layer", "Textures", "Texture"
 ]
 
 
@@ -28,6 +28,7 @@ class Model:
         self._seqs = Sequences()
         self._glbs = GlobalSequences()
         self._mtls = Materials()
+        self._texs = Textures()
 
     @property
     def version(self):
@@ -86,6 +87,18 @@ class Model:
             self._mtls = v
         else:
             raise TypeError("must be a Materials object")
+
+    @property
+    def textures(self):
+        """Collection of Texture objects."""
+        return self._texs
+
+    @textures.setter
+    def textures(self, v):
+        if isinstance(v, Textures):
+            self._texs = v
+        else:
+            raise TypeError("must be a Textures object")
 
 
 class ModelInfo:
@@ -304,6 +317,41 @@ class Layer:
             self.twosided, self.unfogged, self.no_depth_test,
             self.no_depth_set, self.texture_id, self.tvertex_anim_id,
             self.coord_id, self.alpha
+        )
+
+
+class Textures(_TypedList):
+    """A list that accepts only textures."""
+    def __init__(self, li=None):
+        _TypedList.__init__(self, Texture, li)
+
+
+class Texture:
+    """Class representing a single Texture.
+
+    Exposed member variables:
+
+    replaceable_id: ??? (int)
+    texture_path: Path of the .blp file (str)
+    wrap_width: Whether to wrap the texture around horizontally (bool)
+    wrap_height: Whether to wrap the texture around vertically (bool)
+
+    """
+    def __init__(self, replace_id, path, wrap_width, wrap_height):
+        _assert_int(replace_id)
+        _assert_ascii_len(path, 0x100)
+        _assert_bool(wrap_width)
+        _assert_bool(wrap_height)
+
+        self.replaceable_id = replace_id
+        self.texture_path = path
+        self.wrap_width = wrap_width
+        self.wrap_height = wrap_height
+
+    def __repr__(self):
+        return "Texture(%r, %r, %r, %r)" % (
+            self.replaceable_id, self.texture_path,
+            self.wrap_width, self.wrap_height
         )
 
 
