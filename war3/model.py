@@ -5,7 +5,8 @@ from collections.abc import MutableSequence
 
 __all__ = [
     "Model", "ModelInfo", "Sequences", "Animation", "GlobalSequences",
-    "Materials", "Material", "Layer", "Textures", "Texture"
+    "Materials", "Material", "Layer", "Textures", "Texture", "TextureAnims",
+    "TVertexAnim"
 ]
 
 
@@ -29,6 +30,7 @@ class Model:
         self._glbs = GlobalSequences()
         self._mtls = Materials()
         self._texs = Textures()
+        self._txan = TextureAnims()
 
     @property
     def version(self):
@@ -99,6 +101,18 @@ class Model:
             self._texs = v
         else:
             raise TypeError("must be a Textures object")
+
+    @property
+    def texture_anims(self):
+        """Collection of TVertexAnim objects."""
+        return self._txan
+
+    @texture_anims.setter
+    def texture_anims(self, v):
+        if isinstance(v, TextureAnims):
+            self._txan = v
+        else:
+            raise TypeError("must be a TextureAnims object")
 
 
 class ModelInfo:
@@ -355,6 +369,39 @@ class Texture:
         )
 
 
+class TextureAnims(_TypedList):
+    """A list of TVertexAnim objects."""
+    def __init__(self, li=None):
+        _TypedList.__init__(self, TVertexAnim, li)
+
+
+class TVertexAnim:
+    """A class representing the animaton of texture vertices.
+
+    Exposed member variables:
+
+    translation: Translation of the texture vertices (float triple)
+    rotation: Rotation of the texture vertices (float quadruple)
+    scaling: Scaling of the texture vertices (float triple)
+
+    """
+    def __init__(self, trans, rot, scale):
+        _assert_float_triple(trans)
+        _assert_float_tuple(rot, 4)
+        _assert_float_triple(scale)
+
+        self.translation = trans
+        self.rotation = rot
+        self.scaling = scale
+
+    def __repr__(self):
+        return "TVertexAnim(%r, %r, %r)" % (
+            self.translation,
+            self.rotation,
+            self.scaling
+        )
+
+
 # helper functions
 def _assert_ascii_len(x, n):
     if not isinstance(x, str):
@@ -389,9 +436,12 @@ def _assert_float_range(x, l, u):
     if not l <= x <= u:
         raise ValueError("not %d <= %d <= %d" % (l, x, u))
 
-def _assert_float_triple(x):
-    if not isinstance(x, tuple) or not len(x) == 3 or \
+def _assert_float_tuple(x, n):
+    if not isinstance(x, tuple) or not len(x) == n or \
             not all(map(lambda z: isinstance(z, float), x)):
         raise TypeError("must be a float triple")
+
+def _assert_float_triple(x):
+    _assert_float_tuple(x, 3)
 
 # vim: set ts=4 sw=4 et:
