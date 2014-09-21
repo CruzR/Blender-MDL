@@ -21,6 +21,7 @@ class Loader:
         self.load_version()
         self.load_modelinfo()
         self.load_sequences()
+        self.load_global_sequences()
         return self.model
 
     def check_magic_number(self):
@@ -95,6 +96,18 @@ class Loader:
                 Animation(name, interval, move_speed, non_looping, rarity,
                           bounds_radius, min_extent, max_extent)
             )
+
+    def load_global_sequences(self):
+        buf = self.infile.read(4)
+        if buf != b'GLBS':
+            raise LoadError("expected GLBS, not %s" % buf.decode("ascii"))
+
+        buf = self.load_block()
+        i, n = 0, len(buf)
+        while i < n:
+            duration, = struct.unpack_from('<i', buf, i)
+            self.model.global_sequences.append(duration)
+            i += 4
 
 
 def load(infile):
