@@ -1,8 +1,6 @@
 """This module contains the Model data structure."""
 
 
-from collections.abc import MutableSequence
-
 __all__ = [
     "Model", "ModelInfo", "Animation", "Material", "Layer", "Texture",
     "TVertexAnim", "Geoset"
