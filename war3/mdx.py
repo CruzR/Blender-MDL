@@ -2,6 +2,7 @@
 
 
 import struct
+import sys
 from .model import *
 
 __all__ = ["LoadError", "Loader", "load"]
@@ -11,9 +12,25 @@ class LoadError(Exception):
     pass
 
 
+class _ReadonlyBytesIO:
+    def __init__(self, buf, idx=0):
+        self.buf = buf
+        self.idx = idx
+
+    def read(self, n=-1):
+        idx = self.idx
+        if n < 0 or len(self.buf) - idx < n:
+            self.idx = len(self.buf)
+            return self.buf[self.idx:]
+        else:
+            self.idx += n
+            return self.buf[idx:self.idx]
+
+
 class Loader:
     def __init__(self, infile):
         self.infile = infile
+        self.infile_stack = []
         self.model = Model()
 
     def load(self):
@@ -22,6 +39,7 @@ class Loader:
         self.load_modelinfo()
         self.load_sequences()
         self.load_global_sequences()
+        self.load_materials()
         return self.model
 
     def check_magic_number(self):
@@ -89,6 +107,57 @@ class Loader:
             duration, = struct.unpack_from('<i', buf, i)
             self.model.global_sequences.append(duration)
             i += 4
+
+    def load_materials(self):
+        self.check_block_magic(b'MTLS')
+        buf = self.load_block()
+        i, n = 0, len(buf)
+
+        while i < n:
+            t = struct.unpack_from('<i i i', buf, i)
+            mat = Material(t[1], bool(t[2] & 0x01),
+                           bool(t[2] & 0x10), bool(t[2] & 0x20))
+
+            # HACK: let load_layers() read from existing data
+            self.push_infile(_ReadonlyBytesIO(buf, i + 12))
+            mat.layers = self.load_layers()
+            self.pop_infile()
+
+            self.model.materials.append(mat)
+            i += t[0]
+
+    def push_infile(self, infile):
+        self.infile_stack.append(self.infile)
+        self.infile = infile
+
+    def pop_infile(self):
+        infile = self.infile
+        self.infile = self.infile_stack.pop()
+        return infile
+
+    def load_layers(self):
+        self.check_block_magic(b'LAYS')
+        nlays, = struct.unpack('<i', self.infile.read(4))
+        lays = []
+
+        for i in range(nlays):
+            n, = struct.unpack('<i', self.infile.read(4))
+            buf = self.infile.read(n - 4)
+
+            # Warn about KMTA / KMTF blocks we can't parse yet
+            # TODO: should probably use logging
+            if len(buf) > 24:
+                print("WARNING: ignored LAYS data:", buf, file=sys.stderr)
+
+            t = struct.unpack_from('<5i f', buf)
+            lays.append(
+                Layer(t[0], bool(t[1] & 0x01), bool(t[1] & 0x02),
+                      bool(t[1] & 0x10), bool(t[1] & 0x20),
+                      bool(t[1] & 0x40), bool(t[1] & 0x80),
+                      t[2], t[3], t[4], t[5])
+            )
+
+        return lays
 
 
 def load(infile):
