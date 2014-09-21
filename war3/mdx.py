@@ -40,6 +40,7 @@ class Loader:
         self.load_sequences()
         self.load_global_sequences()
         self.load_materials()
+        self.load_textures()
         return self.model
 
     def check_magic_number(self):
@@ -158,6 +159,19 @@ class Loader:
             )
 
         return lays
+
+    def load_textures(self):
+        self.check_block_magic(b'TEXS')
+        buf = self.load_block()
+        fmt = '<i 256s 4x i'
+
+        for i in range(0, len(buf), struct.calcsize(fmt)):
+            t = struct.unpack_from(fmt, buf, i)
+            rid = t[0]
+            path = t[1].rstrip(b'\x00').decode("ascii")
+            wrap_w = bool(t[2] & 1)
+            wrap_h = bool(t[2] & 2)
+            self.model.textures.append(Texture(rid, path, wrap_w, wrap_h))
 
 
 def load(infile):
