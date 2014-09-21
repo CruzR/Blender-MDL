@@ -20,6 +20,7 @@ class Loader:
         self.check_magic_number()
         self.load_version()
         self.load_modelinfo()
+        self.load_sequences()
         return self.model
 
     def check_magic_number(self):
@@ -55,6 +56,45 @@ class Loader:
 
         self.model.model = ModelInfo(name, bounds_radius,
                                      min_extent, max_extent, blend_time)
+
+    def load_sequences(self):
+        buf = self.infile.read(4)
+        if buf != b'SEQS':
+            raise LoadError("expected SEQS, not %s" % buf.decode("ascii"))
+
+        buf = self.load_block()
+        i, n = 0, len(buf)
+        while i < n:
+            name, = struct.unpack_from('<80s', buf, i)
+            name = name.rstrip(b'\x00').decode("ascii")
+            i += 80
+
+            interval = struct.unpack_from('<2i', buf, i)
+            i += 8
+
+            move_speed, = struct.unpack_from('<f', buf, i)
+            i += 4
+
+            non_looping, = struct.unpack_from('<i', buf, i)
+            non_looping = bool(non_looping)
+            i += 4
+
+            rarity, = struct.unpack_from('<f', buf, i)
+            i += 8
+
+            bounds_radius, = struct.unpack_from('<f', buf, i)
+            i += 4
+
+            min_extent = struct.unpack_from('<3f', buf, i)
+            i += 12
+
+            max_extent = struct.unpack_from('<3f', buf, i)
+            i += 12
+
+            self.model.sequences.append(
+                Animation(name, interval, move_speed, non_looping, rarity,
+                          bounds_radius, min_extent, max_extent)
+            )
 
 
 def load(infile):
