@@ -4,9 +4,8 @@
 from collections.abc import MutableSequence
 
 __all__ = [
-    "Model", "ModelInfo", "Sequences", "Animation", "GlobalSequences",
-    "Materials", "Material", "Layer", "Textures", "Texture", "TextureAnims",
-    "TVertexAnim"
+    "Model", "ModelInfo", "Animation", "Material", "Layer", "Texture",
+    "TVertexAnim", "Geoset"
 ]
 
 
@@ -38,6 +37,9 @@ class Model:
     .. attribute:: texture_anims
        Collection of TVertexAnim objects.
 
+    .. attribute:: geosets
+       List of :class:`Geoset` objects.
+
     """
     def __init__(self):
         self.version = None
@@ -47,6 +49,7 @@ class Model:
         self.materials = []
         self.textures = []
         self.texture_anims = []
+        self.geosets = []
 
 
 class ModelInfo:
@@ -292,6 +295,37 @@ class TVertexAnim:
             self.translation,
             self.rotation,
             self.scaling
+        )
+
+
+class Geoset:
+    """A sub-object of a model.
+
+    .. attribute:: vertices
+       A list of vertices (3d vectors).
+
+    .. attribute:: normals
+       A list of normals (3d vectors).
+
+    .. attribute:: faces
+        A list of indices into the vertices list.
+
+    .. attribute:: tvertices
+       A list of texture vertices (2d vectors).
+
+    """
+    def __init__(self, verts, normals, faces, tverts):
+        self.vertices = verts
+        self.normals = normals
+        self.faces = faces
+        self.tvertices = tverts
+
+    def __repr__(self):
+        return "Geoset(%r, %r, %r, %r)" % (
+            self.vertices,
+            self.normals,
+            self.faces,
+            self.tvertices
         )
 
 
