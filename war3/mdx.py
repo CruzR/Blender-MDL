@@ -28,11 +28,14 @@ class Loader:
         if self.infile.read(4) != b'MDLX':
             raise LoadError("not a MDX file")
 
-    def load_version(self):
+    def check_block_magic(self, magic):
         buf = self.infile.read(4)
-        if buf != b'VERS':
-            raise LoadError("expected VERS, not %s" % buf.decode("ascii"))
+        if buf != magic:
+            raise LoadError("expected %s, not %s"
+                            % (magic.decode("ascii"), buf.decode("ascii")))
 
+    def load_version(self):
+        self.check_block_magic(b'VERS')
         buf = self.load_block()
         self.model.version, = struct.unpack('<i', buf)
 
@@ -43,11 +46,9 @@ class Loader:
         return self.infile.read(n)
 
     def load_modelinfo(self):
-        buf = self.infile.read(4)
-        if buf != b'MODL':
-            raise LoadError("expected MODL, not %s" % buf.decode("ascii"))
-
+        self.check_block_magic(b'MODL')
         buf = self.load_block()
+
         name, = struct.unpack_from('<80s', buf)
         name = name.rstrip(b'\x00').decode("ascii")
         bounds_radius, = struct.unpack_from('<f', buf, 80)
@@ -59,38 +60,21 @@ class Loader:
                                      min_extent, max_extent, blend_time)
 
     def load_sequences(self):
-        buf = self.infile.read(4)
-        if buf != b'SEQS':
-            raise LoadError("expected SEQS, not %s" % buf.decode("ascii"))
-
+        self.check_block_magic(b'SEQS')
         buf = self.load_block()
-        i, n = 0, len(buf)
-        while i < n:
-            name, = struct.unpack_from('<80s', buf, i)
-            name = name.rstrip(b'\x00').decode("ascii")
-            i += 80
+        fmt = '<80s 2i f i f 4x f 3f 3f'
 
-            interval = struct.unpack_from('<2i', buf, i)
-            i += 8
+        for i in range(0, len(buf), struct.calcsize(fmt)):
+            t = struct.unpack_from(fmt, buf, i)
 
-            move_speed, = struct.unpack_from('<f', buf, i)
-            i += 4
-
-            non_looping, = struct.unpack_from('<i', buf, i)
-            non_looping = bool(non_looping)
-            i += 4
-
-            rarity, = struct.unpack_from('<f', buf, i)
-            i += 8
-
-            bounds_radius, = struct.unpack_from('<f', buf, i)
-            i += 4
-
-            min_extent = struct.unpack_from('<3f', buf, i)
-            i += 12
-
-            max_extent = struct.unpack_from('<3f', buf, i)
-            i += 12
+            name = t[0].rstrip(b'\x00').decode("ascii")
+            interval = t[1:3]
+            move_speed = t[4]
+            non_looping = bool(t[5])
+            rarity = t[6]
+            bounds_radius = t[7]
+            min_extent = t[8:11]
+            max_extent = t[11:]
 
             self.model.sequences.append(
                 Animation(name, interval, move_speed, non_looping, rarity,
@@ -98,10 +82,7 @@ class Loader:
             )
 
     def load_global_sequences(self):
-        buf = self.infile.read(4)
-        if buf != b'GLBS':
-            raise LoadError("expected GLBS, not %s" % buf.decode("ascii"))
-
+        self.check_block_magic(b'GLBS')
         buf = self.load_block()
         i, n = 0, len(buf)
         while i < n:
