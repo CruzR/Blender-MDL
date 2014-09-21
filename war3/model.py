@@ -1,9 +1,12 @@
 """This module contains the Model data structure."""
 
 
+from enum import Enum
+
+
 __all__ = [
     "Model", "ModelInfo", "Animation", "Material", "Layer", "Texture",
-    "TVertexAnim", "Geoset"
+    "TVertexAnim", "Geoset", "KF", "LineType", "KeyframeAnimation", "Keyframe"
 ]
 
 
@@ -27,13 +30,13 @@ class Model:
        Collection of durations (ints).
 
     .. attribute:: materials
-       Collection of Material objects.
+       Collection of :class:`Material` objects.
 
     .. attribute:: textures
-       Collection of Texture objects.
+       Collection of :class:`Texture` objects.
 
     .. attribute:: texture_anims
-       Collection of TVertexAnim objects.
+       Collection of :class:`TVertexAnim` objects.
 
     .. attribute:: geosets
        List of :class:`Geoset` objects.
@@ -154,12 +157,12 @@ class Material:
        A list of :class:`Layer`s.
 
     """
-    def __init__(self, prio, const_color, sort_prims, full_res, lays=[]):
+    def __init__(self, prio, const_color, sort_prims, full_res, lays=None):
         self.priority_plane = prio
         self.constant_color = const_color
         self.sort_prims_far_z = sort_prims
         self.full_resolution = full_res
-        self.layers = lays
+        self.layers = [] if lays is None else lays
 
     def __repr__(self):
         return "Material(%r, %r, %r, %r, %r)" % (
@@ -206,6 +209,9 @@ class Layer:
     .. attribute:: alpha
        Opacity of the layer (float, 0 == transparent, 1 == opaque).
 
+    .. attribute:: animations
+       A list of :class:`KeyframeAnimation`s.
+
     """
     FM_None = 0
     FM_Transparent = 1
@@ -215,7 +221,7 @@ class Layer:
     FM_Modulate = 5
 
     def __init__(self, fmode, noshade, senvmap, twosided, nofog,
-                 nodtest, nodset, tid, tvaid, cid, alpha):
+                 nodtest, nodset, tid, tvaid, cid, alpha, anims=None):
         self.filter_mode = fmode
         self.unshaded = noshade
         self.sphere_env_map = senvmap
@@ -227,13 +233,14 @@ class Layer:
         self.tvertex_anim_id = tvaid
         self.coord_id = cid
         self.alpha = alpha
+        self.animations = [] if anims is None else anims
 
     def __repr__(self):
-        return "Layer(%r, %r, %r, %r, %r, %r, %r, %r, %r, %r, %r)" % (
+        return "Layer(%r, %r, %r, %r, %r, %r, %r, %r, %r, %r, %r, %r)" % (
             self.filter_mode, self.unshaded, self.sphere_env_map,
             self.twosided, self.unfogged, self.no_depth_test,
             self.no_depth_set, self.texture_id, self.tvertex_anim_id,
-            self.coord_id, self.alpha
+            self.coord_id, self.alpha, self.animations
         )
 
 
@@ -324,6 +331,82 @@ class Geoset:
             self.normals,
             self.faces,
             self.tvertices
+        )
+
+
+class KF(Enum):
+    MaterialAlpha = 0
+    MaterialTexture = 1
+
+    TextureAnimTranslation = 2
+    TextureAnimRotation = 3
+    TextureAnimScaling = 4
+
+
+class LineType(Enum):
+    NoInterpolation = 0
+    Linear = 1
+    Hermite = 2
+    Bezier = 3
+
+
+class KeyframeAnimation:
+    """An animation of some property composed of keyframes.
+
+    .. attribute:: target
+       What is being animated; one of the enum values from :class:`KF`.
+
+    .. attribute:: linetype
+       How to interpolate between keyframes;
+       one of the :class:`LineType` enum values.
+
+    .. attribute global_sequence_id
+       An integer defining the global sequence the animation belongs to.
+
+    .. attribute:: keyframes
+       A list of :class:`Keyframe` objects.
+
+    """
+    def __init__(self, target, linetype, gsid, frames=None):
+        self.target = target
+        self.linetype = linetype
+        self.global_sequence_id = gsid
+        self.keyframes = [] if frames is None else frames
+
+    def __repr__(self):
+        return "KeyframeAnimation(%r, %r, %r, %r)" % (
+            self.target, self.linetype,
+            self.global_sequence_id, self.keyframes
+        )
+
+
+class Keyframe:
+    """A single keyframe of a keyframe animation.
+
+    .. attribute:: frame
+       The frame number, an integer.
+
+    .. attribute:: value
+       The value of the animated property at this keyframe.
+       Its type depends on the owning animation's target.
+
+    .. attribute:: tangent_in
+       Tangent value. None unless the animation's linetype is Hermite
+       or Bezier. Has the same type as value.
+
+    .. attribute:: tangent_out
+       Analogous to tangent_in.
+
+    """
+    def __init__(self, frame, value, tangent_in=None, tangent_out=None):
+        self.frame = frame
+        self.value = value
+        self.tangent_in = tangent_in
+        self.tangent_out = tangent_out
+
+    def __repr__(self):
+        return "Keyframe(%r, %r, %r, %r)" % (
+            self.frame, self.value, self.tangent_in, self.tangent_out
         )
 
 
