@@ -139,26 +139,62 @@ class Loader:
     def load_layers(self):
         self.check_block_magic(b'LAYS')
         nlays, = struct.unpack('<i', self.infile.read(4))
+        fmt = '<5i f'
         lays = []
 
         for i in range(nlays):
             n, = struct.unpack('<i', self.infile.read(4))
             buf = self.infile.read(n - 4)
 
-            # Warn about KMTA / KMTF blocks we can't parse yet
-            # TODO: should probably use logging
-            if len(buf) > 24:
-                print("WARNING: ignored LAYS data:", buf, file=sys.stderr)
+            t = struct.unpack_from(fmt, buf)
+            layer = Layer(t[0], bool(t[1] & 0x01), bool(t[1] & 0x02),
+                          bool(t[1] & 0x10), bool(t[1] & 0x20),
+                          bool(t[1] & 0x40), bool(t[1] & 0x80),
+                          t[2], t[3], t[4], t[5])
 
-            t = struct.unpack_from('<5i f', buf)
-            lays.append(
-                Layer(t[0], bool(t[1] & 0x01), bool(t[1] & 0x02),
-                      bool(t[1] & 0x10), bool(t[1] & 0x20),
-                      bool(t[1] & 0x40), bool(t[1] & 0x80),
-                      t[2], t[3], t[4], t[5])
-            )
+            j, n = struct.calcsize(fmt), len(buf)
+            while j < n:
+                j, anim = self.load_material_keyframe(buf, j)
+                layer.animations.append(anim)
+
+            lays.append(layer)
 
         return lays
+
+    def load_material_keyframe(self, buf, j):
+        magic = buf[j:j+4]
+        if magic == b'KMTA':
+            target = KF.MaterialAlpha
+            fmt0 = '<i f'
+            fmt1 = '<2f'
+        elif magic == b'KMTF':
+            target = KF.MaterialTexture
+            fmt0 = fmt1 = '<2i'
+        else:
+            raise LoadError("exptected KMT{A,F}, not %s"
+                            % buf[j:j+4].decode("ascii"))
+
+        t = struct.unpack_from('<3i', buf, j + 4)
+        numkeys = t[0]
+        linetype = LineType(t[1])
+        gsid = t[2]
+        j += 16
+
+        anim = KeyframeAnimation(target, linetype, gsid)
+        for k in range(numkeys):
+            print(k)
+            frame, value = struct.unpack_from(fmt0, buf, j)
+            j += 8
+
+            if linetype in (LineType.Hermite, LineType.Bezier):
+                tin, tout = struct.unpack_from(fmt1, buf, j)
+                j += 8
+            else:
+                tin = tout = None
+
+            anim.keyframes.append(Keyframe(frame, value, tin, tout))
+
+        return j, anim
 
     def load_textures(self):
         self.check_block_magic(b'TEXS')
