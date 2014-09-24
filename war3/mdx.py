@@ -41,6 +41,7 @@ class Loader:
         self.load_global_sequences()
         self.load_materials()
         self.load_textures()
+        self.load_texture_animations()
         return self.model
 
     def check_magic_number(self):
@@ -202,6 +203,48 @@ class Loader:
             wrap_w = bool(t[2] & 1)
             wrap_h = bool(t[2] & 2)
             self.model.textures.append(Texture(rid, path, wrap_w, wrap_h))
+
+    def load_texture_animations(self):
+        self.check_block_magic(b'TXAN')
+        buf = self.load_block()
+
+        i, n = 0, len(buf)
+        while i < n:
+            trans, rot, scal = None, None, None
+            j, k = 4, struct.unpack_from('<i', buf, i)[0]
+            anims = []
+            while j < k:
+                j, anim = self.load_texture_keyframe(buf, j)
+                anims.append(anim)
+            self.model.texture_anims.append(anims)
+            i += k
+
+    def load_texture_keyframe(self, buf, j):
+        magic = buf[j:j+4]
+        if magic == b'KTAT':
+            target = KF.TextureAnimTranslation
+            fmt1 = '<2f'
+        elif magic == b'KTAR':
+            target = KF.TextureAnimRotation
+        elif magic == b'KTAS':
+            target = KF.TextureAnimScaling
+        else:
+            raise LoadError("exptected KTA{T,R,S}, not %s"
+                            % magic.decode("ascii"))
+
+        def fn_val(buf, j):
+            frame, *value = struct.unpack_from('<i 3f', buf, j)
+            value = tuple(value)
+            j += 16
+            return j, frame, value
+
+        def fn_tan(buf, j):
+            t = struct.unpack_from('<3f 3f', buf, j)
+            tin, tout = t[:3], t[3:]
+            j += 24
+            return j, tin, tout
+
+        return self.load_keyframe(buf, j, target, fn_val, fn_tan)
 
     def load_keyframe(self, buf, j, target, fn_val, fn_tan):
         t = struct.unpack_from('<3i', buf, j + 4)

@@ -6,7 +6,7 @@ from enum import Enum
 
 __all__ = [
     "Model", "ModelInfo", "Animation", "Material", "Layer", "Texture",
-    "TVertexAnim", "Geoset", "KF", "LineType", "KeyframeAnimation", "Keyframe"
+    "Geoset", "KF", "LineType", "KeyframeAnimation", "Keyframe"
 ]
 
 
@@ -36,7 +36,7 @@ class Model:
        Collection of :class:`Texture` objects.
 
     .. attribute:: texture_anims
-       Collection of :class:`TVertexAnim` objects.
+       Collection of lists of :class:`KeyframeAnimation` objects.
 
     .. attribute:: geosets
        List of :class:`Geoset` objects.
@@ -272,34 +272,6 @@ class Texture:
         return "Texture(%r, %r, %r, %r)" % (
             self.replaceable_id, self.texture_path,
             self.wrap_width, self.wrap_height
-        )
-
-
-class TVertexAnim:
-    """A class representing the animaton of texture vertices.
-
-    Exposed member variables:
-
-    .. attribute:: translation
-       Translation of the texture vertices (float triple).
-
-    .. attribute:: rotation
-       Rotation of the texture vertices (float quadruple).
-
-    .. attribute:: scaling
-       Scaling of the texture vertices (float triple).
-
-    """
-    def __init__(self, trans, rot, scale):
-        self.translation = trans
-        self.rotation = rot
-        self.scaling = scale
-
-    def __repr__(self):
-        return "TVertexAnim(%r, %r, %r)" % (
-            self.translation,
-            self.rotation,
-            self.scaling
         )
 
 
