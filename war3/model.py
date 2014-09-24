@@ -374,7 +374,7 @@ class KeyframeAnimation:
         self.keyframes = [] if frames is None else frames
 
     def __repr__(self):
-        return "KeyframeAnimation(%r, %r, %r, %r)" % (
+        return "KeyframeAnimation(%s, %s, %r, %r)" % (
             self.target, self.linetype,
             self.global_sequence_id, self.keyframes
         )
