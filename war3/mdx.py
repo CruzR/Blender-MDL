@@ -165,36 +165,30 @@ class Loader:
         magic = buf[j:j+4]
         if magic == b'KMTA':
             target = KF.MaterialAlpha
-            fmt0 = '<i f'
-            fmt1 = '<2f'
+            fmt_val = '<i f'
+            fmt_tan = '<2f'
         elif magic == b'KMTF':
             target = KF.MaterialTexture
-            fmt0 = fmt1 = '<2i'
+            fmt_val = fmt_tan = '<2i'
         else:
             raise LoadError("exptected KMT{A,F}, not %s"
-                            % buf[j:j+4].decode("ascii"))
+                            % magic.decode("ascii"))
 
-        t = struct.unpack_from('<3i', buf, j + 4)
-        numkeys = t[0]
-        linetype = LineType(t[1])
-        gsid = t[2]
-        j += 16
-
-        anim = KeyframeAnimation(target, linetype, gsid)
-        for k in range(numkeys):
-            print(k)
-            frame, value = struct.unpack_from(fmt0, buf, j)
-            j += 8
-
-            if linetype in (LineType.Hermite, LineType.Bezier):
-                tin, tout = struct.unpack_from(fmt1, buf, j)
+        def fn_val(fmt):
+            def _fn_val(buf, j):
+                frame, value = struct.unpack_from(fmt, buf, j)
                 j += 8
-            else:
-                tin = tout = None
+                return j, frame, value
+            return _fn_val
 
-            anim.keyframes.append(Keyframe(frame, value, tin, tout))
+        def fn_tan(fmt):
+            def _fn_tan(buf, j):
+                tin, tout = struct.unpack_from(fmt, buf, j)
+                j += 8
+                return j, tin, tout
+            return _fn_tan
 
-        return j, anim
+        return self.load_keyframe(buf, j, target, fn_val(fmt_val), fn_tan(fmt_tan))
 
     def load_textures(self):
         self.check_block_magic(b'TEXS')
@@ -208,6 +202,26 @@ class Loader:
             wrap_w = bool(t[2] & 1)
             wrap_h = bool(t[2] & 2)
             self.model.textures.append(Texture(rid, path, wrap_w, wrap_h))
+
+    def load_keyframe(self, buf, j, target, fn_val, fn_tan):
+        t = struct.unpack_from('<3i', buf, j + 4)
+        numkeys = t[0]
+        linetype = LineType(t[1])
+        gsid = t[2]
+        j += 16
+
+        anim = KeyframeAnimation(target, linetype, gsid)
+        for k in range(numkeys):
+            j, frame, value = fn_val(buf, j)
+
+            if linetype in (LineType.Hermite, LineType.Bezier):
+                j, tin, tout = fn_tan(buf, j)
+            else:
+                tin = tout = None
+
+            anim.keyframes.append(Keyframe(frame, value, tin, tout))
+
+        return j, anim
 
 
 def load(infile):
