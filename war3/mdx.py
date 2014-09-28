@@ -1,6 +1,7 @@
 """This module contains an importer for the MDX format."""
 
 
+import io
 import struct
 import sys
 from .model import *
@@ -205,7 +206,10 @@ class Loader:
             self.model.textures.append(Texture(rid, path, wrap_w, wrap_h))
 
     def load_texture_animations(self):
-        self.check_block_magic(b'TXAN')
+        magic = self.infile.read(4)
+        if magic != b'TXAN':
+            self.infile.seek(-4, io.SEEK_CUR)
+            return
         buf = self.load_block()
 
         i, n = 0, len(buf)
