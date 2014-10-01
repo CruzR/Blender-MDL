@@ -43,6 +43,7 @@ class Loader:
         self.load_materials()
         self.load_textures()
         self.load_texture_animations()
+        self.load_geosets()
         return self.model
 
     def check_magic_number(self):
@@ -268,6 +269,67 @@ class Loader:
             anim.keyframes.append(Keyframe(frame, value, tin, tout))
 
         return j, anim
+
+    def load_geosets(self):
+        self.check_block_magic(b'GEOS')
+        buf = self.load_block()
+
+        i, n = 0, len(buf)
+        while i < n:
+            i += self.load_geoset(buf, i)
+
+    def load_geoset(self, buf, i):
+        m, = struct.unpack_from('<i', buf, i)
+
+        self.push_infile(_ReadonlyBytesIO(buf, i + 4))
+        verts = self.load_vectors(b'VRTX')
+        norms = self.load_vectors(b'NRMS')
+        faces = self.load_faces()
+        self.pop_infile()
+
+        self.model.geosets.append(Geoset(verts, norms, faces))
+        return m
+
+    def load_vectors(self, magic):
+        self.check_block_magic(magic)
+        n, = struct.unpack('<i', self.infile.read(4))
+        vectors = []
+
+        for i in range(n):
+            vectors.append(struct.unpack('<3f', self.infile.read(12)))
+
+        return vectors
+
+    def load_faces(self):
+        self.check_block_magic(b'PTYP')
+        n, = struct.unpack('<i', self.infile.read(4))
+
+        ptyps = []
+        for i in range(n):
+            ptyp, = struct.unpack('<i', self.infile.read(4))
+            ptyps.append(PrimitiveType(ptyp))
+
+        self.check_block_magic(b'PCNT')
+        m, = struct.unpack('<i', self.infile.read(4))
+        assert n == m
+
+        pcnts = []
+        for i in range(m):
+            pcnts.append(struct.unpack('<i', self.infile.read(4))[0])
+
+        self.check_block_magic(b'PVTX')
+        n, = struct.unpack('<i', self.infile.read(4))
+        assert n == sum(pcnts)
+
+        pindices = []
+        for pcnt in pcnts:
+            indices = []
+            for i in range(pcnt):
+                index, = struct.unpack('<h', self.infile.read(2))
+                indices.append(index)
+            pindices.append(indices)
+
+        return [Primitives(*t) for t in zip(ptyps, pindices)]
 
 
 def load(infile):
