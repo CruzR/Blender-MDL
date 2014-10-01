@@ -52,8 +52,7 @@ class Loader:
     def check_block_magic(self, magic):
         buf = self.infile.read(4)
         if buf != magic:
-            raise LoadError("expected %s, not %s"
-                            % (magic.decode("ascii"), buf.decode("ascii")))
+            raise LoadError("expected %s, not %s" % (magic, buf))
 
     def load_version(self):
         self.check_block_magic(b'VERS')
