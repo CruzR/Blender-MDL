@@ -2,11 +2,13 @@
 
 
 from enum import Enum
+from collections import namedtuple
 
 
 __all__ = [
     "Model", "ModelInfo", "Animation", "Material", "Layer", "Texture",
-    "Geoset", "KF", "LineType", "KeyframeAnimation", "Keyframe"
+    "Geoset", "KF", "LineType", "KeyframeAnimation", "Keyframe",
+    "PrimitiveType", "Primitives"
 ]
 
 
@@ -291,7 +293,7 @@ class Geoset:
        A list of texture vertices (2d vectors).
 
     """
-    def __init__(self, verts, normals, faces, tverts):
+    def __init__(self, verts, normals, faces, tverts=None):
         self.vertices = verts
         self.normals = normals
         self.faces = faces
@@ -380,6 +382,30 @@ class Keyframe:
         return "Keyframe(%r, %r, %r, %r)" % (
             self.frame, self.value, self.tangent_in, self.tangent_out
         )
+
+
+class PrimitiveType(Enum):
+    # TODO: Are these D3D primitives or GL primitives (both represent tris as 4)?
+    # TODO: Does war3 accept other primitive types?
+    TriangleList = 4
+
+
+class Primitives:
+    """A list of rendering primitives.
+
+    .. attribute:: type_
+       A value from the :class:`PrimitiveType` enum.
+
+    .. attribute:: indices
+       The indices into the vertex buffer that compromise the primitives.
+
+    """
+    def __init__(self, type_, indices):
+        self.type_ = type_
+        self.indices = indices
+
+    def __repr__(self):
+        return "Primitives(%s, %r)" % (self.type_, self.indices)
 
 
 # vim: set ts=4 sw=4 et:
