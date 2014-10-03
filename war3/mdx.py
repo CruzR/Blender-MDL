@@ -9,6 +9,16 @@ from .model import *
 __all__ = ["LoadError", "Loader", "load"]
 
 
+def partition(elements, counts):
+    i = 0
+    for n in counts:
+        li = []
+        for j in range(n):
+            li.append(elements[i])
+            i += 1
+        yield li
+
+
 class LoadError(Exception):
     pass
 
@@ -290,46 +300,29 @@ class Loader:
         self.model.geosets.append(Geoset(verts, norms, faces))
         return m
 
-    def load_vectors(self, magic):
+    def load_vectors(self, magic, type_='<3f'):
         self.check_block_magic(magic)
         n, = struct.unpack('<i', self.infile.read(4))
+        m = struct.calcsize(type_)
         vectors = []
 
         for i in range(n):
-            vectors.append(struct.unpack('<3f', self.infile.read(12)))
+            t = struct.unpack(type_, self.infile.read(m))
+            vectors.append(t[0] if len(t) == 1 else t)
 
         return vectors
 
     def load_faces(self):
-        self.check_block_magic(b'PTYP')
-        n, = struct.unpack('<i', self.infile.read(4))
+        ptyps = [PrimitiveType(t)
+                 for t in self.load_vectors(b'PTYP', '<i')]
 
-        ptyps = []
-        for i in range(n):
-            ptyp, = struct.unpack('<i', self.infile.read(4))
-            ptyps.append(PrimitiveType(ptyp))
+        pcnts = self.load_vectors(b'PCNT', '<i')
+        assert len(ptyps) == len(pcnts)
 
-        self.check_block_magic(b'PCNT')
-        m, = struct.unpack('<i', self.infile.read(4))
-        assert n == m
+        pvtx = self.load_vectors(b'PVTX', '<h')
+        assert len(pvtx) == sum(pcnts)
 
-        pcnts = []
-        for i in range(m):
-            pcnts.append(struct.unpack('<i', self.infile.read(4))[0])
-
-        self.check_block_magic(b'PVTX')
-        n, = struct.unpack('<i', self.infile.read(4))
-        assert n == sum(pcnts)
-
-        pindices = []
-        for pcnt in pcnts:
-            indices = []
-            for i in range(pcnt):
-                index, = struct.unpack('<h', self.infile.read(2))
-                indices.append(index)
-            pindices.append(indices)
-
-        return [Primitives(*t) for t in zip(ptyps, pindices)]
+        return [Primitives(*t) for t in zip(ptyps, partition(pvtx, pcnts))]
 
 
 def load(infile):
