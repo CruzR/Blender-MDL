@@ -295,9 +295,10 @@ class Loader:
         verts = self.load_vectors(b'VRTX')
         norms = self.load_vectors(b'NRMS')
         faces = self.load_faces()
+        vgrps = self.load_vectors(b'GNDX', '<B')
         self.pop_infile()
 
-        self.model.geosets.append(Geoset(verts, norms, faces))
+        self.model.geosets.append(Geoset(verts, norms, faces, vgrps))
         return m
 
     def load_vectors(self, magic, type_='<3f'):

@@ -287,23 +287,28 @@ class Geoset:
        A list of normals (3d vectors).
 
     .. attribute:: faces
-        A list of indices into the vertices list.
+       A list of indices into the vertices list.
+
+    .. attribute:: vertexgroups
+       A partition (division into disjoint subsets) of the vertices.
 
     .. attribute:: tvertices
        A list of texture vertices (2d vectors).
 
     """
-    def __init__(self, verts, normals, faces, tverts=None):
+    def __init__(self, verts, normals, faces, vgrps, tverts=None):
         self.vertices = verts
         self.normals = normals
         self.faces = faces
+        self.vertexgroups = vgrps
         self.tvertices = tverts
 
     def __repr__(self):
-        return "Geoset(%r, %r, %r, %r)" % (
+        return "Geoset(%r, %r, %r, %r, %r)" % (
             self.vertices,
             self.normals,
             self.faces,
+            self.vertexgroups,
             self.tvertices
         )
 
