@@ -292,23 +292,28 @@ class Geoset:
     .. attribute:: vertexgroups
        A partition (division into disjoint subsets) of the vertices.
 
+    .. attribute:: groups
+       ???
+
     .. attribute:: tvertices
        A list of texture vertices (2d vectors).
 
     """
-    def __init__(self, verts, normals, faces, vgrps, tverts=None):
+    def __init__(self, verts, normals, faces, vgrps, groups, tverts=None):
         self.vertices = verts
         self.normals = normals
         self.faces = faces
         self.vertexgroups = vgrps
+        self.groups = groups
         self.tvertices = tverts
 
     def __repr__(self):
-        return "Geoset(%r, %r, %r, %r, %r)" % (
+        return "Geoset(%r, %r, %r, %r, %r, %r)" % (
             self.vertices,
             self.normals,
             self.faces,
             self.vertexgroups,
+            self.groups,
             self.tvertices
         )
 

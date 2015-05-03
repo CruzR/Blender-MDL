@@ -296,9 +296,10 @@ class Loader:
         norms = self.load_vectors(b'NRMS')
         faces = self.load_faces()
         vgrps = self.load_vectors(b'GNDX', '<B')
+        groups = self.load_groups()
         self.pop_infile()
 
-        self.model.geosets.append(Geoset(verts, norms, faces, vgrps))
+        self.model.geosets.append(Geoset(verts, norms, faces, vgrps, groups))
         return m
 
     def load_vectors(self, magic, type_='<3f'):
@@ -324,6 +325,11 @@ class Loader:
         assert len(pvtx) == sum(pcnts)
 
         return [Primitives(*t) for t in zip(ptyps, partition(pvtx, pcnts))]
+
+    def load_groups(self):
+        mtgcs = self.load_vectors(b'MTGC', '<i')
+        mats = self.load_vectors(b'MATS', '<i')
+        return list(partition(mats, mtgcs))
 
 
 def load(infile):
