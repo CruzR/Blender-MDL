@@ -280,18 +280,22 @@ class Loader:
 
         return j, anim
 
-    def load_geosets(self):
-        self.check_block_magic(b'GEOS')
+    def load_multiblocks(self, magic, loader_fn):
+        self.check_block_magic(magic)
         buf = self.load_block()
 
         i, n = 0, len(buf)
         while i < n:
-            i += self.load_geoset(buf, i)
+            m, = struct.unpack_from('<i', buf, i)
+            self.push_infile(_ReadonlyBytesIO(buf, i + 4))
+            loader_fn(m - 4)
+            self.pop_infile()
+            i += m
 
-    def load_geoset(self, buf, i):
-        m, = struct.unpack_from('<i', buf, i)
+    def load_geosets(self):
+        self.load_multiblocks(b'GEOS', self.load_geoset)
 
-        self.push_infile(_ReadonlyBytesIO(buf, i + 4))
+    def load_geoset(self, max_bytes):
         verts = self.load_vectors(b'VRTX')
         norms = self.load_vectors(b'NRMS')
         faces = self.load_faces()
@@ -300,11 +304,9 @@ class Loader:
         attrs = self.load_geoset_attributes()
         danim, anims = self.load_ganimations()
         tverts = self.load_tvertices()
-        self.pop_infile()
 
         self.model.geosets.append(Geoset(verts, norms, faces, vgrps, groups,
                                          attrs, danim, anims, tverts))
-        return m
 
     def load_vectors(self, magic, type_='<3f'):
         self.check_block_magic(magic)
