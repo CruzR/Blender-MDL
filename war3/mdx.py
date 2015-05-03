@@ -299,10 +299,11 @@ class Loader:
         groups = self.load_groups()
         attrs = self.load_geoset_attributes()
         danim, anims = self.load_ganimations()
+        tverts = self.load_tvertices()
         self.pop_infile()
 
         self.model.geosets.append(Geoset(verts, norms, faces, vgrps, groups,
-                                         attrs, danim, anims))
+                                         attrs, danim, anims, tverts))
         return m
 
     def load_vectors(self, magic, type_='<3f'):
@@ -355,6 +356,16 @@ class Loader:
             anims.append(GAnimation(bounds_radius, min_ext, max_ext))
 
         return def_anim, anims
+
+    def load_tvertices(self):
+        self.check_block_magic(b'UVAS')
+        n, = struct.unpack('<i', self.infile.read(4))
+        tverts = []
+
+        for i in range(n):
+            tverts.append(self.load_vectors(b'UVBS', '<2f'))
+
+        return tverts
 
 
 def load(infile):

@@ -305,10 +305,10 @@ class Geoset:
        A list of animations (:class:`GAnimation`).
 
     .. attribute:: tvertices
-       A list of texture vertices (2d vectors).
+       A list of lists of texture vertices (2d vectors).
 
     """
-    def __init__(self, verts, normals, faces, vgrps, groups, attrs, danim, anims, tverts=None):
+    def __init__(self, verts, normals, faces, vgrps, groups, attrs, danim, anims, tverts):
         self.vertices = verts
         self.normals = normals
         self.faces = faces
