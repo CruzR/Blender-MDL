@@ -297,9 +297,12 @@ class Loader:
         faces = self.load_faces()
         vgrps = self.load_vectors(b'GNDX', '<B')
         groups = self.load_groups()
+        attrs = self.load_geoset_attributes()
+        danim, anims = self.load_ganimations()
         self.pop_infile()
 
-        self.model.geosets.append(Geoset(verts, norms, faces, vgrps, groups))
+        self.model.geosets.append(Geoset(verts, norms, faces, vgrps, groups,
+                                         attrs, danim, anims))
         return m
 
     def load_vectors(self, magic, type_='<3f'):
@@ -330,6 +333,28 @@ class Loader:
         mtgcs = self.load_vectors(b'MTGC', '<i')
         mats = self.load_vectors(b'MATS', '<i')
         return list(partition(mats, mtgcs))
+
+    def load_geoset_attributes(self):
+        material_id, = struct.unpack('<i', self.infile.read(4))
+        selection_grp, = struct.unpack('<i', self.infile.read(4))
+        selectable, = struct.unpack('<i', self.infile.read(4))
+        return GeosetAttributes(material_id, selection_grp, selectable != 4)
+
+    def load_ganimations(self):
+        bounds_radius, = struct.unpack('<f', self.infile.read(4))
+        min_ext = struct.unpack('<3f', self.infile.read(12))
+        max_ext = struct.unpack('<3f', self.infile.read(12))
+        def_anim = GAnimation(bounds_radius, min_ext, max_ext)
+
+        n, = struct.unpack('<i', self.infile.read(4))
+        anims = []
+        for i in range(n):
+            bounds_radius, = struct.unpack('<f', self.infile.read(4))
+            min_ext = struct.unpack('<3f', self.infile.read(12))
+            max_ext = struct.unpack('<3f', self.infile.read(12))
+            anims.append(GAnimation(bounds_radius, min_ext, max_ext))
+
+        return def_anim, anims
 
 
 def load(infile):

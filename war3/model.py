@@ -8,7 +8,7 @@ from collections import namedtuple
 __all__ = [
     "Model", "ModelInfo", "Animation", "Material", "Layer", "Texture",
     "Geoset", "KF", "LineType", "KeyframeAnimation", "Keyframe",
-    "PrimitiveType", "Primitives"
+    "PrimitiveType", "Primitives", "GeosetAttributes", "GAnimation"
 ]
 
 
@@ -293,27 +293,42 @@ class Geoset:
        A partition (division into disjoint subsets) of the vertices.
 
     .. attribute:: groups
-       ???
+       ??? (list of lists of ints)
+
+    .. attribute:: attributes
+       Misc. geoset attributes (of type :class:`GeosetAttributes`).
+
+    .. attribute:: default_animation
+       The default animation state (a :class:`GAnimation`).
+
+    .. attribute:: animations
+       A list of animations (:class:`GAnimation`).
 
     .. attribute:: tvertices
        A list of texture vertices (2d vectors).
 
     """
-    def __init__(self, verts, normals, faces, vgrps, groups, tverts=None):
+    def __init__(self, verts, normals, faces, vgrps, groups, attrs, danim, anims, tverts=None):
         self.vertices = verts
         self.normals = normals
         self.faces = faces
         self.vertexgroups = vgrps
         self.groups = groups
+        self.attributes = attrs
+        self.default_animation = danim
+        self.animations = anims
         self.tvertices = tverts
 
     def __repr__(self):
-        return "Geoset(%r, %r, %r, %r, %r, %r)" % (
+        return "Geoset(%r, %r, %r, %r, %r, %r, %r, %r, %r)" % (
             self.vertices,
             self.normals,
             self.faces,
             self.vertexgroups,
             self.groups,
+            self.attributes,
+            self.default_animation,
+            self.animations,
             self.tvertices
         )
 
@@ -416,6 +431,12 @@ class Primitives:
 
     def __repr__(self):
         return "Primitives(%s, %r)" % (self.type_, self.indices)
+
+
+GeosetAttributes = namedtuple("GeosetAttributes",
+                              "material_id selection_group selectable")
+GAnimation = namedtuple("GAnimation",
+                        "bounds_radius minimum_extent maximum_extent")
 
 
 # vim: set ts=4 sw=4 et:
