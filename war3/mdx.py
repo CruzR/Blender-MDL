@@ -228,12 +228,12 @@ class Loader:
             j, k = 4, struct.unpack_from('<i', buf, i)[0]
             anims = []
             while j < k:
-                j, anim = self.load_texture_keyframe(buf, j)
+                j, anim = self.load_texture_animation_keyframe(buf, j)
                 anims.append(anim)
-            self.model.texture_anims.append(anims)
+            self.model.texture_animations.append(anims)
             i += k
 
-    def load_texture_keyframe(self, buf, j):
+    def load_texture_animation_keyframe(self, buf, j):
         magic = buf[j:j+4]
         if magic == b'KTAT':
             target = KF.TextureAnimTranslation

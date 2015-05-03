@@ -37,7 +37,7 @@ class Model:
     .. attribute:: textures
        Collection of :class:`Texture` objects.
 
-    .. attribute:: texture_anims
+    .. attribute:: texture_animations
        Collection of lists of :class:`KeyframeAnimation` objects.
 
     .. attribute:: geosets
@@ -51,7 +51,7 @@ class Model:
         self.global_sequences = []
         self.materials = []
         self.textures = []
-        self.texture_anims = []
+        self.texture_animations = []
         self.geosets = []
 
 
