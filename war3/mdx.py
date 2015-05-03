@@ -38,10 +38,61 @@ class _ReadonlyBytesIO:
             return self.buf[idx:self.idx]
 
 
-class Loader:
+class _BaseLoader:
+    """Contains utility methods that make writing the Loader easier."""
+
     def __init__(self, infile):
         self.infile = infile
         self.infile_stack = []
+
+    def push_infile(self, infile):
+        self.infile_stack.append(self.infile)
+        self.infile = infile
+
+    def pop_infile(self):
+        infile = self.infile
+        self.infile = self.infile_stack.pop()
+        return infile
+
+    def check_block_magic(self, magic):
+        buf = self.infile.read(4)
+        if buf != magic:
+            raise LoadError("expected %s, not %s" % (magic, buf))
+
+    def load_block(self):
+        n, = struct.unpack('<i', self.infile.read(4))
+        if n < 0:
+            raise LoadError("expected a positive integer")
+        return self.infile.read(n)
+
+    def load_multiblocks(self, magic, loader_fn):
+        self.check_block_magic(magic)
+        buf = self.load_block()
+
+        i, n = 0, len(buf)
+        while i < n:
+            m, = struct.unpack_from('<i', buf, i)
+            self.push_infile(_ReadonlyBytesIO(buf, i + 4))
+            loader_fn(m - 4)
+            self.pop_infile()
+            i += m
+
+    def load_vectors(self, magic, type_='<3f'):
+        self.check_block_magic(magic)
+        n, = struct.unpack('<i', self.infile.read(4))
+        m = struct.calcsize(type_)
+        vectors = []
+
+        for i in range(n):
+            t = struct.unpack(type_, self.infile.read(m))
+            vectors.append(t[0] if len(t) == 1 else t)
+
+        return vectors
+
+
+class Loader(_BaseLoader):
+    def __init__(self, infile):
+        _BaseLoader.__init__(self, infile)
         self.model = Model()
 
     def load(self):
@@ -60,21 +111,10 @@ class Loader:
         if self.infile.read(4) != b'MDLX':
             raise LoadError("not a MDX file")
 
-    def check_block_magic(self, magic):
-        buf = self.infile.read(4)
-        if buf != magic:
-            raise LoadError("expected %s, not %s" % (magic, buf))
-
     def load_version(self):
         self.check_block_magic(b'VERS')
         buf = self.load_block()
         self.model.version, = struct.unpack('<i', buf)
-
-    def load_block(self):
-        n, = struct.unpack('<i', self.infile.read(4))
-        if n < 0:
-            raise LoadError("expected a positive integer")
-        return self.infile.read(n)
 
     def load_modelinfo(self):
         self.check_block_magic(b'MODL')
@@ -138,15 +178,6 @@ class Loader:
 
             self.model.materials.append(mat)
             i += t[0]
-
-    def push_infile(self, infile):
-        self.infile_stack.append(self.infile)
-        self.infile = infile
-
-    def pop_infile(self):
-        infile = self.infile
-        self.infile = self.infile_stack.pop()
-        return infile
 
     def load_layers(self):
         self.check_block_magic(b'LAYS')
@@ -280,18 +311,6 @@ class Loader:
 
         return j, anim
 
-    def load_multiblocks(self, magic, loader_fn):
-        self.check_block_magic(magic)
-        buf = self.load_block()
-
-        i, n = 0, len(buf)
-        while i < n:
-            m, = struct.unpack_from('<i', buf, i)
-            self.push_infile(_ReadonlyBytesIO(buf, i + 4))
-            loader_fn(m - 4)
-            self.pop_infile()
-            i += m
-
     def load_geosets(self):
         self.load_multiblocks(b'GEOS', self.load_geoset)
 
@@ -307,18 +326,6 @@ class Loader:
 
         self.model.geosets.append(Geoset(verts, norms, faces, vgrps, groups,
                                          attrs, danim, anims, tverts))
-
-    def load_vectors(self, magic, type_='<3f'):
-        self.check_block_magic(magic)
-        n, = struct.unpack('<i', self.infile.read(4))
-        m = struct.calcsize(type_)
-        vectors = []
-
-        for i in range(n):
-            t = struct.unpack(type_, self.infile.read(m))
-            vectors.append(t[0] if len(t) == 1 else t)
-
-        return vectors
 
     def load_faces(self):
         ptyps = [PrimitiveType(t)
