@@ -122,6 +122,44 @@ class _BaseLoader:
 
         return n, anim
 
+    def load_object(self):
+        k, = struct.unpack('<i', self.infile.read(4))
+        name, = struct.unpack('<80s', self.infile.read(80))
+        name = name.rstrip(b'\x00').decode('ascii')
+        obj_id, = struct.unpack('<i', self.infile.read(4))
+        parent, = struct.unpack('<i', self.infile.read(4))
+        flags, = struct.unpack('<i', self.infile.read(4))
+        flags = ObjectFlag.set_from_int(flags)
+
+        j, anims = 96, []
+        while j < k:
+            m, anim = self.load_object_keyframe()
+            anims.append(anim)
+            j += m
+
+        return k, {'name': name, 'object_id': obj_id, 'parent': parent,
+                   'flags': flags, 'animations': anims}
+
+    def load_object_keyframe(self):
+        magic = self.infile.read(4)
+        if magic == b'KGTR':
+            target = KF.ObjectTranslation
+            type_ = '3f'
+        elif magic == b'KGRT':
+            target = KF.ObjectRotation
+            type_ = '4f'
+        elif magic == b'KGSC':
+            target = KF.ObjectScaling
+            type_ = '3f'
+        elif magic == b'KATV':
+            target = KF.ObjectVisibility
+            type_ = 'f'
+        else:
+            raise LoadError("expected KG{TR,RT,SC} or KATV, not %s"
+                            % magic.decode('ascii'))
+
+        return self.load_keyframe(target, type_)
+
 
 class Loader(_BaseLoader):
     def __init__(self, infile):
@@ -139,6 +177,7 @@ class Loader(_BaseLoader):
         self.load_texture_animations()
         self.load_geosets()
         self.load_geoset_animations()
+        self.load_bones()
         return self.model
 
     def check_magic_number(self):
@@ -408,6 +447,20 @@ class Loader(_BaseLoader):
                             % magic.decode('ascii'))
 
         return self.load_keyframe(target, type_)
+
+    def load_bones(self):
+        self.check_block_magic(b'BONE')
+        buf = self.load_block()
+
+        i, n = 0, len(buf)
+        while i < n:
+            self.push_infile(_ReadonlyBytesIO(buf, i))
+            m, obj = self.load_object()
+            obj['geoset_id'], = struct.unpack('<i', self.infile.read(4))
+            obj['geoset_anim_id'], = struct.unpack('<i', self.infile.read(4))
+            self.pop_infile()
+            self.model.bones.append(Bone(**obj))
+            i += m + 8
 
 
 def load(infile):

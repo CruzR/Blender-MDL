@@ -3,13 +3,14 @@
 
 from enum import Enum
 from collections import namedtuple
+from functools import reduce
 
 
 __all__ = [
     "Model", "ModelInfo", "Animation", "Material", "Layer", "Texture",
     "Geoset", "KF", "LineType", "KeyframeAnimation", "Keyframe",
     "PrimitiveType", "Primitives", "GeosetAttributes", "GAnimation",
-    "GeosetAnimation", "ColorAnimation"
+    "GeosetAnimation", "ColorAnimation", "ObjectFlag", "Bone"
 ]
 
 
@@ -47,6 +48,9 @@ class Model:
     .. attribute:: geoset_animations
        List of :class:`GeosetAnimation` objects.
 
+    .. attribute:: bones
+       List of :class:`Bone` objects.
+
     """
     def __init__(self):
         self.version = None
@@ -58,6 +62,7 @@ class Model:
         self.texture_animations = []
         self.geosets = []
         self.geoset_animations = []
+        self.bones = []
 
 
 class ModelInfo:
@@ -349,6 +354,11 @@ class KF(Enum):
     GeosetAnimAlpha = 5
     GeosetAnimColor = 6
 
+    ObjectTranslation = 7
+    ObjectRotation = 8
+    ObjectScaling = 9
+    ObjectVisibility = 10
+
 
 class LineType(Enum):
     NoInterpolation = 0
@@ -457,5 +467,36 @@ class ColorAnimation(Enum):
     DropShadow = 1
     Color = 2
     Both = 3
+
+class ObjectType(Enum):
+    Helper = 0
+    Bone = 256
+    Light = 512
+    Event = 1024
+    Attachement = 2048
+    CollisionShape = 8192
+
+class ObjectFlag(Enum):
+    DontInheritTranslation = 1
+    DontInheritScaling = 2
+    DontInheritRotation = 4
+    Billboarded = 8
+    BillboardedLockX = 16
+    BillboardedLockY = 32
+    BillboardedLockZ = 64
+    CameraAnchored = 128
+
+    @staticmethod
+    def set_from_int(i):
+        s = {flag for flag in ObjectFlag if flag.value & i}
+        return s
+
+    @staticmethod
+    def int_from_set(s):
+        return reduce(lambda acc, flag: acc | flag.value, s, 0)
+
+Bone = namedtuple("Bone",
+                  "name object_id parent flags animations "
+                  "geoset_id geoset_anim_id")
 
 # vim: set ts=4 sw=4 et:
