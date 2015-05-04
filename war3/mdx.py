@@ -179,7 +179,11 @@ class Loader(_BaseLoader):
             )
 
     def load_global_sequences(self):
-        self.check_block_magic(b'GLBS')
+        magic = self.infile.read(4)
+        if magic != b'GLBS':
+            self.infile.seek(-4, io.SEEK_CUR)
+            return
+
         buf = self.load_block()
         i, n = 0, len(buf)
         while i < n:
