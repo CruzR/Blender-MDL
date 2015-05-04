@@ -412,9 +412,12 @@ class Keyframe:
         self.tangent_out = tangent_out
 
     def __repr__(self):
-        return "Keyframe(%r, %r, %r, %r)" % (
-            self.frame, self.value, self.tangent_in, self.tangent_out
-        )
+        if self.tangent_in is None and self.tangent_out is None:
+            return "Keyframe(%r, %r)" % (self.frame, self.value)
+        else:
+            return "Keyframe(%r, %r, %r, %r)" % (
+                self.frame, self.value, self.tangent_in, self.tangent_out
+            )
 
 
 class PrimitiveType(Enum):
