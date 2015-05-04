@@ -8,7 +8,8 @@ from collections import namedtuple
 __all__ = [
     "Model", "ModelInfo", "Animation", "Material", "Layer", "Texture",
     "Geoset", "KF", "LineType", "KeyframeAnimation", "Keyframe",
-    "PrimitiveType", "Primitives", "GeosetAttributes", "GAnimation"
+    "PrimitiveType", "Primitives", "GeosetAttributes", "GAnimation",
+    "GeosetAnimation", "ColorAnimation"
 ]
 
 
@@ -43,6 +44,9 @@ class Model:
     .. attribute:: geosets
        List of :class:`Geoset` objects.
 
+    .. attribute:: geoset_animations
+       List of :class:`GeosetAnimation` objects.
+
     """
     def __init__(self):
         self.version = None
@@ -53,6 +57,7 @@ class Model:
         self.textures = []
         self.texture_animations = []
         self.geosets = []
+        self.geoset_animations = []
 
 
 class ModelInfo:
@@ -341,6 +346,9 @@ class KF(Enum):
     TextureAnimRotation = 3
     TextureAnimScaling = 4
 
+    GeosetAnimAlpha = 5
+    GeosetAnimColor = 6
+
 
 class LineType(Enum):
     NoInterpolation = 0
@@ -438,5 +446,13 @@ GeosetAttributes = namedtuple("GeosetAttributes",
 GAnimation = namedtuple("GAnimation",
                         "bounds_radius minimum_extent maximum_extent")
 
+GeosetAnimation = namedtuple("GeosetAnimation",
+                             "alpha color_animation color geoset_id animations")
+
+class ColorAnimation(Enum):
+    NoAnimation = 0
+    DropShadow = 1
+    Color = 2
+    Both = 3
 
 # vim: set ts=4 sw=4 et:

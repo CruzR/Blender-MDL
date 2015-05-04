@@ -131,6 +131,7 @@ class Loader(_BaseLoader):
         self.load_textures()
         self.load_texture_animations()
         self.load_geosets()
+        self.load_geoset_animations()
         return self.model
 
     def check_magic_number(self):
@@ -366,6 +367,40 @@ class Loader(_BaseLoader):
             tverts.append(self.load_vectors(b'UVBS', '<2f'))
 
         return tverts
+
+    def load_geoset_animations(self):
+        self.load_multiblocks(b'GEOA', self.load_geoset_animation)
+
+    def load_geoset_animation(self, max_bytes):
+        alpha, = struct.unpack('<f', self.infile.read(4))
+        color_anim, = struct.unpack('<i', self.infile.read(4))
+        color_anim = ColorAnimation(color_anim)
+        color = struct.unpack('<3f', self.infile.read(12))
+        geoset_id, = struct.unpack('<i', self.infile.read(4))
+
+        frames = []
+        i = 24
+        while i < max_bytes:
+            j, frame = self.load_geoset_animation_keyframe()
+            frames.append(frame)
+            i = i + j
+
+        anim = GeosetAnimation(alpha, color_anim, color, geoset_id, frames)
+        self.model.geoset_animations.append(anim)
+
+    def load_geoset_animation_keyframe(self):
+        magic = self.infile.read(4)
+        if magic == b'KGAO':
+            target = KF.GeosetAnimAlpha
+            type_ = 'f'
+        elif magic == b'KGAC':
+            target = KF.GeosetAnimColor
+            type_ = '3f'
+        else:
+            raise LoadError("expected KGA{O,C}, not %s"
+                            % magic.decode('ascii'))
+
+        return self.load_keyframe(target, type_)
 
 
 def load(infile):
