@@ -89,6 +89,32 @@ class _BaseLoader:
 
         return vectors
 
+    def load_keyframe(self, target, type_):
+        nkeys, ltype, gsid = struct.unpack('<3i', self.infile.read(12))
+        ltype = LineType(ltype)
+        n = 16 # 4B for block magic
+
+        anim = KeyframeAnimation(target, ltype, gsid)
+        parse_val, parse_tan = map(lambda s: s.format(t=type_),
+                                   ('<i {t}', '<{t} {t}'))
+        sz_val, sz_tan = map(struct.calcsize, (parse_val, parse_tan))
+
+        for k in range(nkeys):
+            frame, *value = struct.unpack(parse_val, self.infile.read(sz_val))
+            n += sz_val
+
+            if ltype in (LineType.Hermite, LineType.Bezier):
+                tangents = struct.unpack(parse_tan, self.infile.read(sz_tan))
+                ntan = len(tangents) // 2
+                tan_in, tan_out = tangents[:ntan], tangents[ntan:]
+                n += sz_tan
+            else:
+                tan_in = tan_out = None
+
+            anim.keyframes.append(Keyframe(frame, value, tan_in, tan_out))
+
+        return n, anim
+
 
 class Loader(_BaseLoader):
     def __init__(self, infile):
@@ -271,32 +297,6 @@ class Loader(_BaseLoader):
                             % magic.decode("ascii"))
 
         return self.load_keyframe(target, '3f')
-
-    def load_keyframe(self, target, type_):
-        nkeys, ltype, gsid = struct.unpack('<3i', self.infile.read(12))
-        ltype = LineType(ltype)
-        n = 16 # 4B for block magic
-
-        anim = KeyframeAnimation(target, ltype, gsid)
-        parse_val, parse_tan = map(lambda s: s.format(t=type_),
-                                   ('<i {t}', '<{t} {t}'))
-        sz_val, sz_tan = map(struct.calcsize, (parse_val, parse_tan))
-
-        for k in range(nkeys):
-            frame, *value = struct.unpack(parse_val, self.infile.read(sz_val))
-            n += sz_val
-
-            if ltype in (LineType.Hermite, LineType.Bezier):
-                tangents = struct.unpack(parse_tan, self.infile.read(sz_tan))
-                ntan = len(tangents) // 2
-                tan_in, tan_out = tangents[:ntan], tangents[ntan:]
-                n += sz_tan
-            else:
-                tan_in = tan_out = None
-
-            anim.keyframes.append(Keyframe(frame, value, tan_in, tan_out))
-
-        return n, anim
 
     def load_geosets(self):
         self.load_multiblocks(b'GEOS', self.load_geoset)
