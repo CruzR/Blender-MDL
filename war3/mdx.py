@@ -38,6 +38,10 @@ class _ReadonlyBytesIO:
             return self.buf[idx:self.idx]
 
 
+def _scalar_or_tuple(li):
+    return li[0] if len(li) == 1 else tuple(li)
+
+
 class _BaseLoader:
     """Contains utility methods that make writing the Loader easier."""
 
@@ -101,12 +105,15 @@ class _BaseLoader:
 
         for k in range(nkeys):
             frame, *value = struct.unpack(parse_val, self.infile.read(sz_val))
+            value = _scalar_or_tuple(value)
             n += sz_val
 
             if ltype in (LineType.Hermite, LineType.Bezier):
                 tangents = struct.unpack(parse_tan, self.infile.read(sz_tan))
                 ntan = len(tangents) // 2
                 tan_in, tan_out = tangents[:ntan], tangents[ntan:]
+                tan_in = _scalar_or_tuple(tan_in)
+                tan_out = _scalar_or_tuple(tan_out)
                 n += sz_tan
             else:
                 tan_in = tan_out = None
