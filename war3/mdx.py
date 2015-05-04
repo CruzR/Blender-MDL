@@ -197,41 +197,29 @@ class Loader(_BaseLoader):
 
             j, n = struct.calcsize(fmt), len(buf)
             while j < n:
-                j, anim = self.load_material_keyframe(buf, j)
+                self.push_infile(_ReadonlyBytesIO(buf, j))
+                m, anim = self.load_material_keyframe()
+                self.pop_infile()
                 layer.animations.append(anim)
+                j += m
 
             lays.append(layer)
 
         return lays
 
-    def load_material_keyframe(self, buf, j):
-        magic = buf[j:j+4]
+    def load_material_keyframe(self):
+        magic = self.infile.read(4)
         if magic == b'KMTA':
             target = KF.MaterialAlpha
-            fmt_val = '<i f'
-            fmt_tan = '<2f'
+            type_ = 'f'
         elif magic == b'KMTF':
             target = KF.MaterialTexture
-            fmt_val = fmt_tan = '<2i'
+            type_ = 'i'
         else:
             raise LoadError("exptected KMT{A,F}, not %s"
                             % magic.decode("ascii"))
 
-        def fn_val(fmt):
-            def _fn_val(buf, j):
-                frame, value = struct.unpack_from(fmt, buf, j)
-                j += 8
-                return j, frame, value
-            return _fn_val
-
-        def fn_tan(fmt):
-            def _fn_tan(buf, j):
-                tin, tout = struct.unpack_from(fmt, buf, j)
-                j += 8
-                return j, tin, tout
-            return _fn_tan
-
-        return self.load_keyframe(buf, j, target, fn_val(fmt_val), fn_tan(fmt_tan))
+        return self.load_keyframe(target, type_)
 
     def load_textures(self):
         self.check_block_magic(b'TEXS')
@@ -255,20 +243,25 @@ class Loader(_BaseLoader):
 
         i, n = 0, len(buf)
         while i < n:
-            trans, rot, scal = None, None, None
-            j, k = 4, struct.unpack_from('<i', buf, i)[0]
-            anims = []
-            while j < k:
-                j, anim = self.load_texture_animation_keyframe(buf, j)
-                anims.append(anim)
+            k, = struct.unpack_from('<i', buf, i)
+            self.push_infile(_ReadonlyBytesIO(buf), i + 4)
+            anims = self.load_texture_animation_keyframes(k - 4)
+            self.pop_infile()
             self.model.texture_animations.append(anims)
             i += k
 
-    def load_texture_animation_keyframe(self, buf, j):
-        magic = buf[j:j+4]
+    def load_texture_animation_keyframes(self, k):
+        j, anims = 0, []
+        while j < k:
+            m, anim = self.load_texture_animation_keyframe()
+            j += m
+            anims.append(anim)
+        return anims
+
+    def load_texture_animation_keyframe(self):
+        magic = self.infile.read(4)
         if magic == b'KTAT':
             target = KF.TextureAnimTranslation
-            fmt1 = '<2f'
         elif magic == b'KTAR':
             target = KF.TextureAnimRotation
         elif magic == b'KTAS':
@@ -277,39 +270,33 @@ class Loader(_BaseLoader):
             raise LoadError("exptected KTA{T,R,S}, not %s"
                             % magic.decode("ascii"))
 
-        def fn_val(buf, j):
-            frame, *value = struct.unpack_from('<i 3f', buf, j)
-            value = tuple(value)
-            j += 16
-            return j, frame, value
+        return self.load_keyframe(target, '3f')
 
-        def fn_tan(buf, j):
-            t = struct.unpack_from('<3f 3f', buf, j)
-            tin, tout = t[:3], t[3:]
-            j += 24
-            return j, tin, tout
+    def load_keyframe(self, target, type_):
+        nkeys, ltype, gsid = struct.unpack('<3i', self.infile.read(12))
+        ltype = LineType(ltype)
+        n = 16 # 4B for block magic
 
-        return self.load_keyframe(buf, j, target, fn_val, fn_tan)
+        anim = KeyframeAnimation(target, ltype, gsid)
+        parse_val, parse_tan = map(lambda s: s.format(t=type_),
+                                   ('<i {t}', '<{t} {t}'))
+        sz_val, sz_tan = map(struct.calcsize, (parse_val, parse_tan))
 
-    def load_keyframe(self, buf, j, target, fn_val, fn_tan):
-        t = struct.unpack_from('<3i', buf, j + 4)
-        numkeys = t[0]
-        linetype = LineType(t[1])
-        gsid = t[2]
-        j += 16
+        for k in range(nkeys):
+            frame, *value = struct.unpack(parse_val, self.infile.read(sz_val))
+            n += sz_val
 
-        anim = KeyframeAnimation(target, linetype, gsid)
-        for k in range(numkeys):
-            j, frame, value = fn_val(buf, j)
-
-            if linetype in (LineType.Hermite, LineType.Bezier):
-                j, tin, tout = fn_tan(buf, j)
+            if ltype in (LineType.Hermite, LineType.Bezier):
+                tangents = struct.unpack(parse_tan, self.infile.read(sz_tan))
+                ntan = len(tangents) // 2
+                tan_in, tan_out = tangents[:ntan], tangents[ntan:]
+                n += sz_tan
             else:
-                tin = tout = None
+                tan_in = tan_out = None
 
-            anim.keyframes.append(Keyframe(frame, value, tin, tout))
+            anim.keyframes.append(Keyframe(frame, value, tan_in, tan_out))
 
-        return j, anim
+        return n, anim
 
     def load_geosets(self):
         self.load_multiblocks(b'GEOS', self.load_geoset)
