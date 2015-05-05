@@ -10,7 +10,8 @@ __all__ = [
     "Model", "ModelInfo", "Animation", "Material", "Layer", "Texture",
     "Geoset", "KF", "LineType", "KeyframeAnimation", "Keyframe",
     "PrimitiveType", "Primitives", "GeosetAttributes", "GAnimation",
-    "GeosetAnimation", "ColorAnimation", "ObjectFlag", "Bone"
+    "GeosetAnimation", "ColorAnimation", "ObjectFlag", "Bone", "LightType",
+    "Light"
 ]
 
 
@@ -51,6 +52,9 @@ class Model:
     .. attribute:: bones
        List of :class:`Bone` objects.
 
+    .. attribute:: lights
+       List of :class:`Light` objects.
+
     """
     def __init__(self):
         self.version = None
@@ -63,6 +67,7 @@ class Model:
         self.geosets = []
         self.geoset_animations = []
         self.bones = []
+        self.lights = []
 
 
 class ModelInfo:
@@ -359,6 +364,12 @@ class KF(Enum):
     ObjectScaling = 9
     ObjectVisibility = 10
 
+    LightVisibility = 11
+    LightColor = 12
+    LightIntensity = 13
+    LightAmbientColor = 14
+    LightAmbientIntensity = 15
+
 
 class LineType(Enum):
     NoInterpolation = 0
@@ -498,5 +509,15 @@ class ObjectFlag(Enum):
 Bone = namedtuple("Bone",
                   "name object_id parent flags animations "
                   "geoset_id geoset_anim_id")
+
+class LightType(Enum):
+    Omnidirectional = 0
+    Directional = 1
+    Ambient = 2
+
+Light = namedtuple("Light",
+                   "name object_id parent flags animations "
+                   "type_ attenuation color intensity "
+                   "ambient_color ambient_intensity")
 
 # vim: set ts=4 sw=4 et:

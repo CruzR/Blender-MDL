@@ -178,6 +178,7 @@ class Loader(_BaseLoader):
         self.load_geosets()
         self.load_geoset_animations()
         self.load_bones()
+        self.load_lights()
         return self.model
 
     def check_magic_number(self):
@@ -461,6 +462,64 @@ class Loader(_BaseLoader):
             self.pop_infile()
             self.model.bones.append(Bone(**obj))
             i += m + 8
+
+    def load_lights(self):
+        magic = self.infile.read(4)
+        if magic != b'LITE':
+            self.infile.seek(-4, io.SEEK_CUR)
+            return
+        buf = self.load_block()
+
+        i, n = 0, len(buf)
+        while i < n:
+            m, = struct.unpack_from('<i', buf, i)
+            self.push_infile(_ReadonlyBytesIO(buf, i + 4))
+            self.load_light(m - 4)
+            self.pop_infile()
+            i += m
+
+    def load_light(self, max_bytes):
+        j, obj = self.load_object()
+        obj['type_'], = struct.unpack('<i', self.infile.read(4))
+        obj['type_'] = LightType(obj['type_'])
+        obj['attenuation'] = struct.unpack('<2f', self.infile.read(8))
+        obj['color'] = struct.unpack('<3f', self.infile.read(12))
+        obj['intensity'], = struct.unpack('<f', self.infile.read(4))
+        obj['ambient_color'] = struct.unpack('<3f', self.infile.read(12))
+        obj['ambient_intensity'], = struct.unpack('<f', self.infile.read(4))
+        j += 44
+
+        anims = []
+        while j < max_bytes:
+            m, anim = self.load_light_keyframe()
+            anims.append(anim)
+            j += m
+
+        obj['animations'].extend(anims)
+        self.model.lights.append(Light(**obj))
+
+    def load_light_keyframe(self):
+        magic = self.infile.read(4)
+        if magic == b'KLAV':
+            target = KF.LightVisibility
+            type_ = 'f'
+        elif magic == b'KLAC':
+            target = KF.LightColor
+            type_ = '3f'
+        elif magic == b'KLAI':
+            target = KF.LightIntensity
+            type_ = 'f'
+        elif magic == b'KLBC':
+            target = KF.LightAmbientColor
+            type_ = '3f'
+        elif maigc == b'KLBI':
+            target = KF.LightAmbientIntensity
+            type_ = 'f'
+        else:
+            raise LoadError('expected KL{AV,AC,AI,BC,BI}, not %s'
+                            % magic.decode('ascii'))
+
+        return self.load_keyframe(target, type_)
 
 
 def load(infile):
