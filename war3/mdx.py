@@ -127,13 +127,13 @@ class _BaseLoader:
 
         return n, anim
 
-    def load_object(self):
+    def load_object(self, flag_class=ObjectFlag):
         k, = struct.unpack('<i', self.infile.read(4))
         name = self.infile.read(80).rstrip(b'\x00').decode('ascii')
         obj_id, = struct.unpack('<i', self.infile.read(4))
         parent, = struct.unpack('<i', self.infile.read(4))
         flags, = struct.unpack('<i', self.infile.read(4))
-        flags = ObjectFlag.set_from_int(flags)
+        flags = flag_class.set_from_int(flags)
 
         j, anims = 96, []
         while j < k:
