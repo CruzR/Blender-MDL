@@ -69,8 +69,13 @@ class _BaseLoader:
             raise LoadError("expected a positive integer")
         return self.infile.read(n)
 
-    def load_multiblocks(self, magic, loader_fn):
-        self.check_block_magic(magic)
+    def load_multiblocks(self, magic, loader_fn, optional=False):
+        if optional:
+            if magic != self.infile.read(4):
+                self.infile.seek(-4, io.SEEK_CUR)
+                return
+        else:
+            self.check_block_magic(magic)
         buf = self.load_block()
 
         i, n = 0, len(buf)
@@ -314,20 +319,8 @@ class Loader(_BaseLoader):
             self.model.textures.append(Texture(rid, path, wrap_w, wrap_h))
 
     def load_texture_animations(self):
-        magic = self.infile.read(4)
-        if magic != b'TXAN':
-            self.infile.seek(-4, io.SEEK_CUR)
-            return
-        buf = self.load_block()
-
-        i, n = 0, len(buf)
-        while i < n:
-            k, = struct.unpack_from('<i', buf, i)
-            self.push_infile(_ReadonlyBytesIO(buf), i + 4)
-            anims = self.load_texture_animation_keyframes(k - 4)
-            self.pop_infile()
-            self.model.texture_animations.append(anims)
-            i += k
+        self.load_multiblocks(b'TXAN', self.load_texture_animation_keyframes,
+                              optional=True)
 
     def load_texture_animation_keyframes(self, k):
         j, anims = 0, []
@@ -335,7 +328,7 @@ class Loader(_BaseLoader):
             m, anim = self.load_texture_animation_keyframe()
             j += m
             anims.append(anim)
-        return anims
+        self.model.texture_animations.append(anims)
 
     def load_texture_animation_keyframe(self):
         magic = self.infile.read(4)
@@ -465,19 +458,7 @@ class Loader(_BaseLoader):
             i += m + 8
 
     def load_lights(self):
-        magic = self.infile.read(4)
-        if magic != b'LITE':
-            self.infile.seek(-4, io.SEEK_CUR)
-            return
-        buf = self.load_block()
-
-        i, n = 0, len(buf)
-        while i < n:
-            m, = struct.unpack_from('<i', buf, i)
-            self.push_infile(_ReadonlyBytesIO(buf, i + 4))
-            self.load_light(m - 4)
-            self.pop_infile()
-            i += m
+        self.load_multiblocks(b'LITE', self.load_light, optional=True)
 
     def load_light(self, max_bytes):
         j, obj = self.load_object()
