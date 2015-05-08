@@ -178,6 +178,7 @@ class Loader(_BaseLoader):
         self.load_global_sequences()
         self.load_materials()
         self.load_textures()
+        # XXX: load_texture_animation is untested
         self.load_texture_animations()
         self.load_geosets()
         self.load_geoset_animations()
@@ -186,6 +187,11 @@ class Loader(_BaseLoader):
         self.load_helpers()
         self.load_attachements()
         self.load_pivot_points()
+        # TODO: load PREM (particle emitter) blocks
+        # TODO: load PRE2 (particle emitter 2) blocks
+        # TODO: load RIBB (ribbon emitter) blocks
+        # TODO: load EVTS (events) blocks
+        # TODO: load CLID (collision shape) blocks
         return self.model
 
     def check_magic_number(self):
