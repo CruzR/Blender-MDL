@@ -501,7 +501,17 @@ class ObjectType(Enum):
     Attachement = 2048
     CollisionShape = 8192
 
-class ObjectFlag(Enum):
+class Flag(Enum):
+    @classmethod
+    def set_from_int(cls, i):
+        s = {flag for flag in cls if flag.value & i}
+        return s
+
+    @staticmethod
+    def int_from_set(s):
+        return reduce(lambda acc, flag: acc | flag.value, s, 0)
+
+class ObjectFlag(Flag):
     DontInheritTranslation = 1
     DontInheritScaling = 2
     DontInheritRotation = 4
@@ -510,15 +520,6 @@ class ObjectFlag(Enum):
     BillboardedLockY = 32
     BillboardedLockZ = 64
     CameraAnchored = 128
-
-    @staticmethod
-    def set_from_int(i):
-        s = {flag for flag in ObjectFlag if flag.value & i}
-        return s
-
-    @staticmethod
-    def int_from_set(s):
-        return reduce(lambda acc, flag: acc | flag.value, s, 0)
 
 Bone = namedtuple("Bone",
                   "name object_id parent flags animations "
