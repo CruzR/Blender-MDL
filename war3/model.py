@@ -11,7 +11,7 @@ __all__ = [
     "Geoset", "KF", "LineType", "KeyframeAnimation", "Keyframe",
     "PrimitiveType", "Primitives", "GeosetAttributes", "GAnimation",
     "GeosetAnimation", "ColorAnimation", "ObjectFlag", "Bone", "LightType",
-    "Light", "Helper"
+    "Light", "Helper", "Attachement"
 ]
 
 
@@ -58,6 +58,9 @@ class Model:
     .. attribute:: helpers
        List of :class:`Helper` objects.
 
+    .. attribute:: attachements
+       List of :class:`Attachement` objects.
+
     """
     def __init__(self):
         self.version = None
@@ -72,6 +75,7 @@ class Model:
         self.bones = []
         self.lights = []
         self.helpers = []
+        self.attachements = []
 
 
 class ModelInfo:
@@ -374,6 +378,8 @@ class KF(Enum):
     LightAmbientColor = 14
     LightAmbientIntensity = 15
 
+    AttachementVisibility = 16
+
 
 class LineType(Enum):
     NoInterpolation = 0
@@ -525,5 +531,9 @@ Light = namedtuple("Light",
                    "ambient_color ambient_intensity")
 
 Helper = namedtuple("Helper", "name object_id parent flags animations")
+
+Attachement = namedtuple("Attachement",
+                         "name object_id parent flags animations "
+                         "path attachement_id")
 
 # vim: set ts=4 sw=4 et:

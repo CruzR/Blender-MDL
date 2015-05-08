@@ -185,6 +185,7 @@ class Loader(_BaseLoader):
         self.load_bones()
         self.load_lights()
         self.load_helpers()
+        self.load_attachements()
         return self.model
 
     def check_magic_number(self):
@@ -521,6 +522,32 @@ class Loader(_BaseLoader):
     def load_helper(self):
         j, obj = self.load_object()
         return j, Helper(**obj)
+
+    def load_attachements(self):
+        self.load_multiblocks(b'ATCH', self.load_attachement, optional=True)
+
+    def load_attachement(self, max_bytes):
+        j, obj = self.load_object()
+        obj['path'] = self.infile.read(256).rstrip(b'\x00').decode('ascii')
+        # XXX: is this really just padding or does it do anything
+        self.infile.read(4)
+        obj['attachement_id'], = struct.unpack('<i', self.infile.read(4))
+        j += 264
+
+        while j < max_bytes:
+            m, anim = self.load_attachement_keyframe()
+            obj['animations'].append(anim)
+            j += m
+
+        self.model.attachements.append(Attachement(**obj))
+
+    def load_attachement_keyframe(self):
+        magic = self.infile.read(4)
+        if magic != b'KATV':
+            raise LoadError("expected KATV, not %s"
+                            % magic.decode('ascii'))
+
+        return self.load_keyframe(KF.AttachementVisibility, 'f')
 
 
 def load(infile):
