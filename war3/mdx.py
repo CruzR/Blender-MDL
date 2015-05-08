@@ -179,6 +179,7 @@ class Loader(_BaseLoader):
         self.load_geoset_animations()
         self.load_bones()
         self.load_lights()
+        self.load_helpers()
         return self.model
 
     def check_magic_number(self):
@@ -520,6 +521,25 @@ class Loader(_BaseLoader):
                             % magic.decode('ascii'))
 
         return self.load_keyframe(target, type_)
+
+    def load_helpers(self):
+        magic = self.infile.read(4)
+        if magic != b'HELP':
+            self.infile.seek(-4, io.SEEK_CUR)
+            return
+        buf = self.load_block()
+
+        i, n = 0, len(buf)
+        while i < n:
+            self.push_infile(_ReadonlyBytesIO(buf, i))
+            m, h = self.load_helper()
+            self.pop_infile()
+            self.model.helpers.append(h)
+            i += m
+
+    def load_helper(self):
+        j, obj = self.load_object()
+        return j, Helper(**obj)
 
 
 def load(infile):

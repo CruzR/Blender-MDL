@@ -11,7 +11,7 @@ __all__ = [
     "Geoset", "KF", "LineType", "KeyframeAnimation", "Keyframe",
     "PrimitiveType", "Primitives", "GeosetAttributes", "GAnimation",
     "GeosetAnimation", "ColorAnimation", "ObjectFlag", "Bone", "LightType",
-    "Light"
+    "Light", "Helper"
 ]
 
 
@@ -55,6 +55,9 @@ class Model:
     .. attribute:: lights
        List of :class:`Light` objects.
 
+    .. attribute:: helpers
+       List of :class:`Helper` objects.
+
     """
     def __init__(self):
         self.version = None
@@ -68,6 +71,7 @@ class Model:
         self.geoset_animations = []
         self.bones = []
         self.lights = []
+        self.helpers = []
 
 
 class ModelInfo:
@@ -519,5 +523,7 @@ Light = namedtuple("Light",
                    "name object_id parent flags animations "
                    "type_ attenuation color intensity "
                    "ambient_color ambient_intensity")
+
+Helper = namedtuple("Helper", "name object_id parent flags animations")
 
 # vim: set ts=4 sw=4 et:
