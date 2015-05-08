@@ -129,8 +129,7 @@ class _BaseLoader:
 
     def load_object(self):
         k, = struct.unpack('<i', self.infile.read(4))
-        name, = struct.unpack('<80s', self.infile.read(80))
-        name = name.rstrip(b'\x00').decode('ascii')
+        name = self.infile.read(80).rstrip(b'\x00').decode('ascii')
         obj_id, = struct.unpack('<i', self.infile.read(4))
         parent, = struct.unpack('<i', self.infile.read(4))
         flags, = struct.unpack('<i', self.infile.read(4))
