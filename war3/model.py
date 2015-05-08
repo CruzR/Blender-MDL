@@ -61,6 +61,9 @@ class Model:
     .. attribute:: attachements
        List of :class:`Attachement` objects.
 
+    .. attribute:: pivot_points
+       List of 3d float vectors.
+
     """
     def __init__(self):
         self.version = None
@@ -76,6 +79,7 @@ class Model:
         self.lights = []
         self.helpers = []
         self.attachements = []
+        self.pivot_points = []
 
 
 class ModelInfo:

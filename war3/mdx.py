@@ -185,6 +185,7 @@ class Loader(_BaseLoader):
         self.load_lights()
         self.load_helpers()
         self.load_attachements()
+        self.load_pivot_points()
         return self.model
 
     def check_magic_number(self):
@@ -547,6 +548,12 @@ class Loader(_BaseLoader):
                             % magic.decode('ascii'))
 
         return self.load_keyframe(KF.AttachementVisibility, 'f')
+
+    def load_pivot_points(self):
+        self.check_block_magic(b'PIVT')
+        n, = struct.unpack('<i', self.infile.read(4))
+        for i in range(n // 12):
+            self.model.pivot_points.append(struct.unpack('<3f', self.infile.read(12)))
 
 
 def load(infile):
