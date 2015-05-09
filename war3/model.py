@@ -11,7 +11,7 @@ __all__ = [
     "Geoset", "KF", "LineType", "KeyframeAnimation", "Keyframe",
     "PrimitiveType", "Primitives", "GeosetAttributes", "GAnimation",
     "GeosetAnimation", "ColorAnimation", "ObjectFlag", "Bone", "LightType",
-    "Light", "Helper", "Attachement"
+    "Light", "Helper", "Attachement", "ParticleFlag", "ParticleEmitter"
 ]
 
 
@@ -64,6 +64,9 @@ class Model:
     .. attribute:: pivot_points
        List of 3d float vectors.
 
+    .. attribute:: particle_emitters
+       List of :class:`ParticleEmitter` objects.
+
     """
     def __init__(self):
         self.version = None
@@ -80,6 +83,7 @@ class Model:
         self.helpers = []
         self.attachements = []
         self.pivot_points = []
+        self.particle_emitters = []
 
 
 class ModelInfo:
@@ -384,6 +388,8 @@ class KF(Enum):
 
     AttachementVisibility = 16
 
+    ParticleEmitterVisibility = 17
+
 
 class LineType(Enum):
     NoInterpolation = 0
@@ -540,5 +546,14 @@ Helper = namedtuple("Helper", "name object_id parent flags animations")
 Attachement = namedtuple("Attachement",
                          "name object_id parent flags animations "
                          "path attachement_id")
+
+class ParticleFlag(Flag):
+    EmitterUsesMDL = 1 << 15
+    EmitterUsesTGA = 1 << 16
+
+ParticleEmitter = namedtuple("ParticleEmitter",
+                             "name object_id parent flags animations "
+                             "emission_rate gravity longitude latitude "
+                             "model_path life_span init_velocity")
 
 # vim: set ts=4 sw=4 et:

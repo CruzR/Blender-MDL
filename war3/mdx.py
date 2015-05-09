@@ -187,7 +187,8 @@ class Loader(_BaseLoader):
         self.load_helpers()
         self.load_attachements()
         self.load_pivot_points()
-        # TODO: load PREM (particle emitter) blocks
+        # XXX: load_particle_emitters is untested
+        self.load_particle_emitters()
         # TODO: load PRE2 (particle emitter 2) blocks
         # TODO: load RIBB (ribbon emitter) blocks
         # TODO: load EVTS (events) blocks
@@ -560,6 +561,36 @@ class Loader(_BaseLoader):
         n, = struct.unpack('<i', self.infile.read(4))
         for i in range(n // 12):
             self.model.pivot_points.append(struct.unpack('<3f', self.infile.read(12)))
+
+    def load_particle_emitters(self):
+        self.load_multiblocks(b'PREM', self.load_particle_emitter, optional=True)
+
+    def load_particle_emitter(self, max_bytes):
+        j, obj = self.load_object(flag_class=ParticleFlag)
+        obj['emission_rate'], = struct.unpack('<f', self.infile.read(4))
+        obj['gravity'], = struct.unpack('<f', self.infile.read(4))
+        obj['longitude'], = struct.unpack('<f', self.infile.read(4))
+        obj['latitude'], = struct.unpack('<f'< self.infile.read(4))
+        obj['model_path'] = self.infile.read(256).rstrip(b'\x00').decode('ascii')
+        # XXX: is this really just padding?
+        obj['life_span'], = struct.unpack('<f', self.infile.read(4))
+        obj['init_velocity'], = struct.unpack('<f', self.infile.read(4))
+        j += 280
+
+        while j < max_bytes:
+            m, anim = self.load_particle_emitter_keyframe()
+            obj['animations'].append(anim)
+            j += m
+
+        self.model.particle_emitters.append(ParticleEmitter(**obj))
+
+    def load_particle_emitter_keyframe(self):
+        magic = self.infile.read(4)
+        if magic != b'KPEV':
+            raise LoadError("expected KPEV, not %s"
+                            % magic.decode('ascii'))
+
+        return self.load_keyframe(KF.ParticleEmitterVisibility, 'f')
 
 
 def load(infile):
