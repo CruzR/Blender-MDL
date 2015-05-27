@@ -12,7 +12,7 @@ def partition(elements, counts):
     i = 0
     for n in counts:
         li = []
-        for j in range(n):
+        for _ in range(n):
             li.append(elements[i])
             i += 1
         yield li
@@ -91,7 +91,7 @@ class _BaseLoader:
         m = struct.calcsize(type_)
         vectors = []
 
-        for i in range(n):
+        for _ in range(n):
             t = struct.unpack(type_, self.infile.read(m))
             vectors.append(t[0] if len(t) == 1 else t)
 
@@ -107,7 +107,7 @@ class _BaseLoader:
                                 for s in ('<i {t}', '<{t} {t}')]
         sz_val, sz_tan = [struct.calcsize(s) for s in (parse_val, parse_tan)]
 
-        for k in range(nkeys):
+        for _ in range(nkeys):
             frame, *value = struct.unpack(parse_val, self.infile.read(sz_val))
             value = _scalar_or_tuple(value)
             n += sz_val
@@ -276,7 +276,7 @@ class Loader(_BaseLoader):
         fmt = '<5i f'
         lays = []
 
-        for i in range(nlays):
+        for _ in range(nlays):
             n, = struct.unpack('<i', self.infile.read(4))
             buf = self.infile.read(n - 4)
 
@@ -354,7 +354,7 @@ class Loader(_BaseLoader):
     def load_geosets(self):
         self.load_multiblocks(b'GEOS', self.load_geoset)
 
-    def load_geoset(self, max_bytes):
+    def load_geoset(self, _):
         verts = self.load_vectors(b'VRTX')
         norms = self.load_vectors(b'NRMS')
         faces = self.load_faces()
@@ -398,7 +398,7 @@ class Loader(_BaseLoader):
 
         n, = struct.unpack('<i', self.infile.read(4))
         anims = []
-        for i in range(n):
+        for _ in range(n):
             bounds_radius, = struct.unpack('<f', self.infile.read(4))
             min_ext = struct.unpack('<3f', self.infile.read(12))
             max_ext = struct.unpack('<3f', self.infile.read(12))
@@ -411,7 +411,7 @@ class Loader(_BaseLoader):
         n, = struct.unpack('<i', self.infile.read(4))
         tverts = []
 
-        for i in range(n):
+        for _ in range(n):
             tverts.append(self.load_vectors(b'UVBS', '<2f'))
 
         return tverts
@@ -558,7 +558,7 @@ class Loader(_BaseLoader):
     def load_pivot_points(self):
         self.check_block_magic(b'PIVT')
         n, = struct.unpack('<i', self.infile.read(4))
-        for i in range(n // 12):
+        for _ in range(n // 12):
             self.model.pivot_points.append(struct.unpack('<3f', self.infile.read(12)))
 
     def load_particle_emitters(self):
