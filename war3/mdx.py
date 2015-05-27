@@ -3,7 +3,6 @@
 
 import io
 import struct
-import sys
 from .model import *
 
 __all__ = ["LoadError", "Loader", "load"]
@@ -104,9 +103,9 @@ class _BaseLoader:
         n = 16 # 4B for block magic
 
         anim = KeyframeAnimation(target, ltype, gsid)
-        parse_val, parse_tan = map(lambda s: s.format(t=type_),
-                                   ('<i {t}', '<{t} {t}'))
-        sz_val, sz_tan = map(struct.calcsize, (parse_val, parse_tan))
+        parse_val, parse_tan = [s.format(t=type_)
+                                for s in ('<i {t}', '<{t} {t}')]
+        sz_val, sz_tan = [struct.calcsize(s) for s in (parse_val, parse_tan)]
 
         for k in range(nkeys):
             frame, *value = struct.unpack(parse_val, self.infile.read(sz_val))
@@ -502,7 +501,7 @@ class Loader(_BaseLoader):
         elif magic == b'KLBC':
             target = KF.LightAmbientColor
             type_ = '3f'
-        elif maigc == b'KLBI':
+        elif magic == b'KLBI':
             target = KF.LightAmbientIntensity
             type_ = 'f'
         else:
@@ -570,7 +569,7 @@ class Loader(_BaseLoader):
         obj['emission_rate'], = struct.unpack('<f', self.infile.read(4))
         obj['gravity'], = struct.unpack('<f', self.infile.read(4))
         obj['longitude'], = struct.unpack('<f', self.infile.read(4))
-        obj['latitude'], = struct.unpack('<f'< self.infile.read(4))
+        obj['latitude'], = struct.unpack('<f', self.infile.read(4))
         obj['model_path'] = self.infile.read(256).rstrip(b'\x00').decode('ascii')
         # XXX: is this really just padding?
         obj['life_span'], = struct.unpack('<f', self.infile.read(4))
