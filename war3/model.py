@@ -12,7 +12,8 @@ __all__ = [
     "PrimitiveType", "Primitives", "GeosetAttributes", "GAnimation",
     "GeosetAnimation", "ColorAnimation", "ObjectFlag", "Bone", "LightType",
     "Light", "Helper", "Attachement", "ParticleFlag", "ParticleEmitter",
-    "ParticleFlag2", "FilterMode", "TailMode", "ParticleEmitter2"
+    "ParticleFlag2", "FilterMode", "TailMode", "ParticleEmitter2",
+    "Flag", "RibbonEmitter"
 ]
 
 
@@ -71,6 +72,9 @@ class Model:
     .. attribute:: particle_emitters_2
        List of :class:`ParticleEmitter2` objects.
 
+    .. attribute:: ribbon_emitters
+       List of :class:`RibbonEmitter` objects.
+
     """
     def __init__(self):
         self.version = None
@@ -89,6 +93,7 @@ class Model:
         self.pivot_points = []
         self.particle_emitters = []
         self.particle_emitters_2 = []
+        self.ribbon_emitters = []
 
 
 class ModelInfo:
@@ -402,6 +407,11 @@ class KF(Enum):
     ParticleEmitter2Length = 22
     ParticleEmitter2Width = 23
 
+    RibbonEmitterVisibility = 24
+    RibbonEmitterHeightAbove = 25
+    RibbonEmitterHeightBelow = 26
+
+
 class LineType(Enum):
     NoInterpolation = 0
     Linear = 1
@@ -596,5 +606,10 @@ ParticleEmitter2 = namedtuple("ParticleEmitter2",
                               "lifespan_uv_anim decay_uv_anim tail_uv_anim "
                               "tail_decay_uv_anim texture_id squirt "
                               "priority_plane replaceable_id")
+
+RibbonEmitter = namedtuple("RibbonEmitter",
+                           "name object_id parent flags animations "
+                           "height_above height_below alpha color lifespan "
+                           "emission_rate rows columns material_id gravity")
 
 # vim: set ts=4 sw=4 et:

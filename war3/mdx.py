@@ -189,7 +189,7 @@ class Loader(_BaseLoader):
         # XXX: load_particle_emitters is untested
         self.load_particle_emitters()
         self.load_particle_emitters_2()
-        # TODO: load RIBB (ribbon emitter) blocks
+        self.load_ribbon_emitters()
         # TODO: load EVTS (events) blocks
         # TODO: load CLID (collision shape) blocks
         return self.model
@@ -647,6 +647,46 @@ class Loader(_BaseLoader):
             target = KF.ParticleEmitter2Width
         else:
             raise LoadError("expected KP2[SLEVNW], not %s"
+                            % magic.decode('ascii'))
+
+        return self.load_keyframe(target, 'f')
+
+    def load_ribbon_emitters(self):
+        self.load_multiblocks(b'RIBB', self.load_ribbon_emitter, optional=True)
+
+    def load_ribbon_emitter(self, max_bytes):
+        j, obj = self.load_object(flag_class=Flag)
+        obj['height_above'], = struct.unpack('<f', self.infile.read(4))
+        obj['height_below'], = struct.unpack('<f', self.infile.read(4))
+        obj['alpha'], = struct.unpack('<f', self.infile.read(4))
+        obj['color'] = struct.unpack('<3f', self.infile.read(12))
+        obj['lifespan'], = struct.unpack('<f', self.infile.read(4))
+        # XXX: is this really just padding?
+        self.infile.read(4)
+        obj['emission_rate'], = struct.unpack('<i', self.infile.read(4))
+        obj['rows'], = struct.unpack('<i', self.infile.read(4))
+        obj['columns'], = struct.unpack('<i', self.infile.read(4))
+        obj['material_id'], = struct.unpack('<i', self.infile.read(4))
+        obj['gravity'], = struct.unpack('<f', self.infile.read(4))
+        j += 52
+
+        while j < max_bytes:
+            m, anim = self.load_ribbon_emitter_keyframe()
+            obj['animations'].append(anim)
+            j += m
+
+        self.model.ribbon_emitters.append(RibbonEmitter(**obj))
+
+    def load_ribbon_emitter_keyframe(self):
+        magic = self.infile.read(4)
+        if magic == b'KRVS':
+            target = KF.RibbonEmitterVisibility
+        elif magic == b'KRHA':
+            target = KF.RibbonEmitterHeightAbove
+        elif magic == b'KRHB':
+            target = KF.RibbonEmitterHeightBelow
+        else:
+            raise LoadError("expected K{RVS,RHA,RHB}, not %s"
                             % magic.decode('ascii'))
 
         return self.load_keyframe(target, 'f')
