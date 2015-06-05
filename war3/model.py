@@ -11,7 +11,8 @@ __all__ = [
     "Geoset", "KF", "LineType", "KeyframeAnimation", "Keyframe",
     "PrimitiveType", "Primitives", "GeosetAttributes", "GAnimation",
     "GeosetAnimation", "ColorAnimation", "ObjectFlag", "Bone", "LightType",
-    "Light", "Helper", "Attachement", "ParticleFlag", "ParticleEmitter"
+    "Light", "Helper", "Attachement", "ParticleFlag", "ParticleEmitter",
+    "ParticleFlag2", "FilterMode", "TailMode", "ParticleEmitter2"
 ]
 
 
@@ -67,6 +68,9 @@ class Model:
     .. attribute:: particle_emitters
        List of :class:`ParticleEmitter` objects.
 
+    .. attribute:: particle_emitters_2
+       List of :class:`ParticleEmitter2` objects.
+
     """
     def __init__(self):
         self.version = None
@@ -84,6 +88,7 @@ class Model:
         self.attachements = []
         self.pivot_points = []
         self.particle_emitters = []
+        self.particle_emitters_2 = []
 
 
 class ModelInfo:
@@ -390,6 +395,12 @@ class KF(Enum):
 
     ParticleEmitterVisibility = 17
 
+    ParticleEmitter2Speed = 18
+    ParticleEmitter2Latitude = 19
+    ParticleEmitter2EmissionRate = 20
+    ParticleEmitter2Visibility = 21
+    ParticleEmitter2Length = 22
+    ParticleEmitter2Width = 23
 
 class LineType(Enum):
     NoInterpolation = 0
@@ -555,5 +566,35 @@ ParticleEmitter = namedtuple("ParticleEmitter",
                              "name object_id parent flags animations "
                              "emission_rate gravity longitude latitude "
                              "model_path life_span init_velocity")
+
+class ParticleFlag2(Flag):
+    DontInheritRotation = 1 << 2
+    Unshaded = 1 << 15
+    SortPrimsFarZ = 1 << 16
+    LineEmitter = 1 << 17
+    Unfogged = 1 << 18
+    ModelSpace = 1 << 19
+    XYQuad = 1 << 20
+
+class FilterMode(Enum):
+    Blend = 0
+    Additive = 1
+    Modulate = 2
+    AlphaKey = 4
+
+class TailMode(Enum):
+    Head = 0
+    Tail = 1
+    Both = 2
+
+ParticleEmitter2 = namedtuple("ParticleEmitter2",
+                              "name object_id parent flags animations "
+                              "speed variation latitude gravity lifespan "
+                              "emission_rate length width filter_mode "
+                              "rows columns tail_mode tail_length time "
+                              "segment_color alpha particle_scaling "
+                              "lifespan_uv_anim decay_uv_anim tail_uv_anim "
+                              "tail_decay_uv_anim texture_id squirt "
+                              "priority_plane replaceable_id")
 
 # vim: set ts=4 sw=4 et:

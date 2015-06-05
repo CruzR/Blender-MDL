@@ -188,7 +188,7 @@ class Loader(_BaseLoader):
         self.load_pivot_points()
         # XXX: load_particle_emitters is untested
         self.load_particle_emitters()
-        # TODO: load PRE2 (particle emitter 2) blocks
+        self.load_particle_emitters_2()
         # TODO: load RIBB (ribbon emitter) blocks
         # TODO: load EVTS (events) blocks
         # TODO: load CLID (collision shape) blocks
@@ -590,6 +590,66 @@ class Loader(_BaseLoader):
                             % magic.decode('ascii'))
 
         return self.load_keyframe(KF.ParticleEmitterVisibility, 'f')
+
+    def load_particle_emitters_2(self):
+        self.load_multiblocks(b'PRE2', self.load_particle_emitter_2, optional=True)
+
+    def load_particle_emitter_2(self, max_bytes):
+        j, obj = self.load_object(flag_class=ParticleFlag2)
+        obj['speed'], = struct.unpack('<f', self.infile.read(4))
+        obj['variation'], = struct.unpack('<f', self.infile.read(4))
+        obj['latitude'], = struct.unpack('<f', self.infile.read(4))
+        obj['gravity'], = struct.unpack('<f', self.infile.read(4))
+        obj['lifespan'], = struct.unpack('<f', self.infile.read(4))
+        obj['emission_rate'], = struct.unpack('<f', self.infile.read(4))
+        obj['length'], = struct.unpack('<f', self.infile.read(4))
+        obj['width'], = struct.unpack('<f', self.infile.read(4))
+        obj['filter_mode'] = FilterMode(struct.unpack('<i', self.infile.read(4))[0])
+        obj['rows'], = struct.unpack('<i', self.infile.read(4))
+        obj['columns'], = struct.unpack('<i', self.infile.read(4))
+        obj['tail_mode'] = TailMode(struct.unpack('<i', self.infile.read(4))[0])
+        obj['tail_length'], = struct.unpack('<f', self.infile.read(4))
+        obj['time'], = struct.unpack('<f', self.infile.read(4))
+        obj['segment_color'] = [struct.unpack('<3f', self.infile.read(12))
+                                for _ in range(3)]
+        obj['alpha'] = struct.unpack('<3B', self.infile.read(3))
+        obj['particle_scaling'] = struct.unpack('<3f', self.infile.read(12))
+        obj['lifespan_uv_anim'] = struct.unpack('<3i', self.infile.read(12))
+        obj['decay_uv_anim'] = struct.unpack('<3i', self.infile.read(12))
+        obj['tail_uv_anim'] = struct.unpack('<3i', self.infile.read(12))
+        obj['tail_decay_uv_anim'] = struct.unpack('<3i', self.infile.read(12))
+        obj['texture_id'], = struct.unpack('<i', self.infile.read(4))
+        obj['squirt'] = bool(struct.unpack('<i', self.infile.read(4))[0])
+        obj['priority_plane'], = struct.unpack('<i', self.infile.read(4))
+        obj['replaceable_id'], = struct.unpack('<i', self.infile.read(4))
+        j += 171
+
+        while j < max_bytes:
+            m, anim = self.load_particle_emitter_keyframe_2()
+            obj['animations'].append(anim)
+            j += m
+
+        self.model.particle_emitters_2.append(ParticleEmitter2(**obj))
+
+    def load_particle_emitter_keyframe_2(self):
+        magic = self.infile.read(4)
+        if magic == b'KP2S':
+            target = KF.ParticleEmitter2Speed
+        elif magic == b'KP2L':
+            target = KF.ParticleEmitter2Latitude
+        elif magic == b'KP2E':
+            target = KF.ParticleEmitter2EmissionRate
+        elif magic == b'KP2V':
+            target = KF.ParticleEmitter2Visibility
+        elif magic == b'KP2N':
+            target = KF.ParticleEmitter2Length
+        elif magic == b'KP2W':
+            target = KF.ParticleEmitter2Width
+        else:
+            raise LoadError("expected KP2[SLEVNW], not %s"
+                            % magic.decode('ascii'))
+
+        return self.load_keyframe(target, 'f')
 
 
 def load(infile):
