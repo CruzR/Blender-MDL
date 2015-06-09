@@ -13,7 +13,7 @@ __all__ = [
     "GeosetAnimation", "ColorAnimation", "ObjectFlag", "Bone", "LightType",
     "Light", "Helper", "Attachement", "ParticleFlag", "ParticleEmitter",
     "ParticleFlag2", "FilterMode", "TailMode", "ParticleEmitter2",
-    "Flag", "RibbonEmitter", "Camera"
+    "Flag", "RibbonEmitter", "Camera", "EventObject"
 ]
 
 
@@ -78,6 +78,9 @@ class Model:
     .. attribute:: camearas
        List of :class:`Camera` objects.
 
+    .. attribute:: event_objects
+       List of :class:`EventObject` objects.
+
     """
     def __init__(self):
         self.version = None
@@ -98,6 +101,7 @@ class Model:
         self.particle_emitters_2 = []
         self.ribbon_emitters = []
         self.cameras = []
+        self.event_objects = []
 
 
 class ModelInfo:
@@ -623,5 +627,8 @@ RibbonEmitter = namedtuple("RibbonEmitter",
 
 Camera = namedtuple("Camera",
                     "name position field_of_view far_clip near_clip target animations")
+
+EventObject = namedtuple("EventObject",
+                         "name object_id parent flags animations event_track")
 
 # vim: set ts=4 sw=4 et:

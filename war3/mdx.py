@@ -192,7 +192,7 @@ class Loader(_BaseLoader):
         self.load_particle_emitters_2()
         self.load_ribbon_emitters()
         self.load_cameras()
-        # TODO: load EVTS (events) blocks
+        self.load_event_objects()
         # TODO: load CLID (collision shape) blocks
         return self.model
 
@@ -735,6 +735,33 @@ class Loader(_BaseLoader):
                             % magic.decode('ascii'))
 
         return self.load_keyframe(target, type_)
+
+    def load_event_objects(self):
+        magic = self.infile.read(4)
+        if magic != b'EVTS':
+            self.infile.seek(io.SEEK_CUR, -4)
+            return
+        buf = self.load_block()
+        i, n = 0, len(buf)
+
+        while i < n:
+            self.push_infile(_ReadonlyBytesIO(buf, i))
+            j, evt = self.load_event_object()
+            self.pop_infile()
+            self.model.event_objects.append(evt)
+            i += j
+
+    def load_event_object(self):
+        j, obj = self.load_object(flag_class=ObjectFlag)
+        magic = self.infile.read(4)
+        if magic != b'KEVT':
+            raise LoadError("expected b'KEVT', not %s" % magic)
+        n, = struct.unpack('<i', self.infile.read(4))
+        # XXX: is this really just padding?
+        self.infile.read(4)
+        obj['event_track'] = [struct.unpack('<i', self.infile.read(4))[0]
+                              for _ in range(n)]
+        return j + n * 4 + 12, EventObject(**obj)
 
 
 def load(infile):
