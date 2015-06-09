@@ -159,8 +159,7 @@ class _BaseLoader:
             target = KF.ObjectVisibility
             type_ = 'f'
         else:
-            raise LoadError("expected KG{TR,RT,SC} or KATV, not %s"
-                            % magic.decode('ascii'))
+            raise LoadError("expected KG{TR,RT,SC} or KATV, not %s" % magic)
 
         return self.load_keyframe(target, type_)
 
@@ -193,7 +192,7 @@ class Loader(_BaseLoader):
         self.load_ribbon_emitters()
         self.load_cameras()
         self.load_event_objects()
-        # TODO: load CLID (collision shape) blocks
+        self.load_collision_shapes()
         return self.model
 
     def check_magic_number(self):
@@ -739,7 +738,7 @@ class Loader(_BaseLoader):
     def load_event_objects(self):
         magic = self.infile.read(4)
         if magic != b'EVTS':
-            self.infile.seek(io.SEEK_CUR, -4)
+            self.infile.seek(-4, io.SEEK_CUR)
             return
         buf = self.load_block()
         i, n = 0, len(buf)
@@ -762,6 +761,36 @@ class Loader(_BaseLoader):
         obj['event_track'] = [struct.unpack('<i', self.infile.read(4))[0]
                               for _ in range(n)]
         return j + n * 4 + 12, EventObject(**obj)
+
+    def load_collision_shapes(self):
+        magic = self.infile.read(4)
+        if magic != b'CLID':
+            self.infile.seek(-4, io.SEEK_CUR)
+            return
+        buf = self.load_block()
+        i, n = 0, len(buf)
+
+        while i < n:
+            self.push_infile(_ReadonlyBytesIO(buf, i))
+            j, col = self.load_collision_shape()
+            self.pop_infile()
+            self.model.collision_shapes.append(col)
+            i += j
+
+    def load_collision_shape(self):
+        j, obj = self.load_object(flag_class=ObjectFlag)
+        shape = Shape(struct.unpack('<i', self.infile.read(4))[0])
+        if shape == Shape.Box:
+            v1 = struct.unpack('<3f', self.infile.read(12))
+            v2 = struct.unpack('<3f', self.infile.read(12))
+            obj['shape'] = Box(v1, v2)
+            j += 28
+        elif shape == Shape.Sphere:
+            position = struct.unpack('<3f', self.infile.read(12))
+            radius, = struct.unpack('<f', self.infile.read(4))
+            obj['shape'] = Sphere(position, radius)
+            j += 20
+        return j, CollisionShape(**obj)
 
 
 def load(infile):

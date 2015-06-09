@@ -13,7 +13,8 @@ __all__ = [
     "GeosetAnimation", "ColorAnimation", "ObjectFlag", "Bone", "LightType",
     "Light", "Helper", "Attachement", "ParticleFlag", "ParticleEmitter",
     "ParticleFlag2", "FilterMode", "TailMode", "ParticleEmitter2",
-    "Flag", "RibbonEmitter", "Camera", "EventObject"
+    "Flag", "RibbonEmitter", "Camera", "EventObject", "Shape", "Box", "Sphere",
+    "CollisionShape"
 ]
 
 
@@ -81,6 +82,9 @@ class Model:
     .. attribute:: event_objects
        List of :class:`EventObject` objects.
 
+    .. attachements: collision_shapes
+       List of :class:`CollisionShape` objects.
+
     """
     def __init__(self):
         self.version = None
@@ -102,6 +106,7 @@ class Model:
         self.ribbon_emitters = []
         self.cameras = []
         self.event_objects = []
+        self.collision_shapes = []
 
 
 class ModelInfo:
@@ -630,5 +635,15 @@ Camera = namedtuple("Camera",
 
 EventObject = namedtuple("EventObject",
                          "name object_id parent flags animations event_track")
+
+class Shape(Enum):
+    Box = 0
+    Sphere = 2
+
+Box = namedtuple("Box", "start end")
+Sphere = namedtuple("Sphere", "position radius")
+
+CollisionShape = namedtuple("CollisionShape",
+                            "name object_id parent flags animations shape")
 
 # vim: set ts=4 sw=4 et:
