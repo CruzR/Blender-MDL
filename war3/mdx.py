@@ -417,7 +417,7 @@ class Loader(_BaseLoader):
         return tverts
 
     def load_geoset_animations(self):
-        self.load_multiblocks(b'GEOA', self.load_geoset_animation)
+        self.load_multiblocks(b'GEOA', self.load_geoset_animation, optional=True)
 
     def load_geoset_animation(self, max_bytes):
         alpha, = struct.unpack('<f', self.infile.read(4))
