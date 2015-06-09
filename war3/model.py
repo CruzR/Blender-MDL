@@ -13,7 +13,7 @@ __all__ = [
     "GeosetAnimation", "ColorAnimation", "ObjectFlag", "Bone", "LightType",
     "Light", "Helper", "Attachement", "ParticleFlag", "ParticleEmitter",
     "ParticleFlag2", "FilterMode", "TailMode", "ParticleEmitter2",
-    "Flag", "RibbonEmitter"
+    "Flag", "RibbonEmitter", "Camera"
 ]
 
 
@@ -75,6 +75,9 @@ class Model:
     .. attribute:: ribbon_emitters
        List of :class:`RibbonEmitter` objects.
 
+    .. attribute:: camearas
+       List of :class:`Camera` objects.
+
     """
     def __init__(self):
         self.version = None
@@ -94,6 +97,7 @@ class Model:
         self.particle_emitters = []
         self.particle_emitters_2 = []
         self.ribbon_emitters = []
+        self.cameras = []
 
 
 class ModelInfo:
@@ -411,6 +415,11 @@ class KF(Enum):
     RibbonEmitterHeightAbove = 25
     RibbonEmitterHeightBelow = 26
 
+    CameraTranslation = 27
+    CameraRotation = 28
+    CameraTargetTranslation = 29
+    CameraUnkownTarget = 30
+
 
 class LineType(Enum):
     NoInterpolation = 0
@@ -611,5 +620,8 @@ RibbonEmitter = namedtuple("RibbonEmitter",
                            "name object_id parent flags animations "
                            "height_above height_below alpha color lifespan "
                            "emission_rate rows columns material_id gravity")
+
+Camera = namedtuple("Camera",
+                    "name position field_of_view far_clip near_clip target animations")
 
 # vim: set ts=4 sw=4 et:

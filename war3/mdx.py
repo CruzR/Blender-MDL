@@ -3,6 +3,7 @@
 
 import io
 import struct
+import warnings
 from .model import *
 
 __all__ = ["LoadError", "Loader", "load"]
@@ -190,6 +191,7 @@ class Loader(_BaseLoader):
         self.load_particle_emitters()
         self.load_particle_emitters_2()
         self.load_ribbon_emitters()
+        self.load_cameras()
         # TODO: load EVTS (events) blocks
         # TODO: load CLID (collision shape) blocks
         return self.model
@@ -690,6 +692,49 @@ class Loader(_BaseLoader):
                             % magic.decode('ascii'))
 
         return self.load_keyframe(target, 'f')
+
+    def load_cameras(self):
+        self.load_multiblocks(b'CAMS', self.load_camera, optional=True)
+
+    def load_camera(self, max_bytes):
+        name = self.infile.read(80).rstrip(b'\x00').decode('ascii')
+        position = struct.unpack('<3f', self.infile.read(12))
+        field_of_view, = struct.unpack('<f', self.infile.read(4))
+        far_clip, = struct.unpack('<f', self.infile.read(4))
+        near_clip, = struct.unpack('<f', self.infile.read(4))
+        target = struct.unpack('<3f', self.infile.read(12))
+        j = 116
+
+        animations = []
+        while j < max_bytes:
+            m, anim = self.load_camera_keyframe()
+            animations.append(anim)
+            j += m
+
+        self.model.cameras.append(Camera(name, position, field_of_view,
+                                         far_clip, near_clip, target, animations))
+
+    def load_camera_keyframe(self):
+        magic = self.infile.read(4)
+        if magic == b'KCTR':
+            target = KF.CameraTranslation
+            type_ = '3f'
+        elif magic == b'KCRL':
+            target = KF.CameraRotation
+            type_ = 'f'
+        elif magic == b'KTTR':
+            target = KF.CameraTargetTranslation
+            type_ = '3f'
+        elif magic == b'BKCT':
+            target = KF.CameraUnkownTarget
+            type_ = 'f'
+            warnings.warn("encountered unknown keyframe, please "
+                          "report this message to upstream")
+        else:
+            raise LoadError("expected  KC{TR,RL}, KTTR or BKCT, not %s"
+                            % magic.decode('ascii'))
+
+        return self.load_keyframe(target, type_)
 
 
 def load(infile):
