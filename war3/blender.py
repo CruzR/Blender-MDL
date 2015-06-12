@@ -1,6 +1,7 @@
 """Module that handles getting models into Blender."""
 
 import bpy
+import bmesh
 
 __all__ = ["BlenderImporter", "save"]
 
@@ -46,6 +47,21 @@ class BlenderImporter:
         # TODO: store geoset.default_animation
         # TODO: store geoset.animations
         # TODO: store geoset.tvertices
+        uvmap = geoset.tvertices[0]
+        uvmap = [(uvmap[f[0]], uvmap[f[1]], uvmap[f[2]]) for f in faces]
+
+        bpy.context.scene.objects.active = obj
+        bpy.ops.object.mode_set(mode='EDIT')
+        bm = bmesh.from_edit_mesh(mesh)
+        uv_layer = bm.loops.layers.uv.verify()
+        bm.faces.layers.tex.verify()
+
+        for f, uvs in zip(bm.faces, uvmap):
+            for l, uv in zip(f.loops, uvs):
+                l[uv_layer].uv = uv
+
+        bmesh.update_edit_mesh(mesh)
+        bpy.ops.object.mode_set(mode='OBJECT')
 
 
 def save(m):
