@@ -2,6 +2,7 @@
 
 import bpy
 import bmesh
+import itertools
 
 __all__ = ["BlenderImporter", "save"]
 
@@ -32,7 +33,7 @@ class BlenderImporter:
         verts = geoset.vertices
         # TODO: if war3 supports other primitive types
         # than triangles, this might not be sufficient
-        faces = [p.indices for p in geoset.faces]
+        faces = make_triangles(geoset.faces)
         mesh.from_pydata(verts, [], faces)
         mesh.update(calc_edges=True)
 
@@ -62,6 +63,15 @@ class BlenderImporter:
 
         bmesh.update_edit_mesh(mesh)
         bpy.ops.object.mode_set(mode='OBJECT')
+
+
+def make_triangles(faces):
+    faces = [chunks(p.indices, 3) for p in faces]
+    return list(itertools.chain(*faces))
+
+
+def chunks(li, n):
+    return [li[i:i+n] for i in range(0, len(li), n)]
 
 
 def save(m):
